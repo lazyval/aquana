@@ -12,7 +12,6 @@ import java.util.concurrent.atomic.AtomicLong
 
 private val logger = LoggerFactory.getLogger("squirtl")
 
-
 class RetryingConsumer(private val delegate: MonotonicConsumer,
                        val retryer: Retryer<ByteBufferMessageSet> = RetryerBuilder.newBuilder<ByteBufferMessageSet>()
                                             .retryIfException()
@@ -31,7 +30,7 @@ class MonotonicConcurrentConsumer(val consumer: PoolAwareConsumer, var offset: A
             val size = if(messages == null) 0 else messages.size()
             val inTime = offset.compareAndSet(ofst, ofst + size)
             if(!inTime) {
-                logger.debug("Fetch took too long for ${consumer}")
+                logger.info("Fetch took too long for $consumer")
             }
         } while(messages == null || !inTime)
         return messages

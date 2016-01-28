@@ -46,7 +46,7 @@ class PoolAwareProducer(val topic: String,
         }
     }
 
-    override fun toString() = "{PoolAwareProducer: [ ${topic}-${partition}, {$producerPool}]}"
+    override fun toString() = "{PoolAwareProducer: [ $topic-$partition, $producerPool]}"
 }
 
 interface Producer {
