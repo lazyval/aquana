@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConversions.asScalaMap
 import java.util.concurrent.atomic.AtomicInteger
 
-private val logger = LoggerFactory.getLogger("squirtl")
+private val logger = LoggerFactory.getLogger("squirtle")
 
 
 class RetryingProducer(val producer: Producer,
@@ -21,7 +21,7 @@ class RetryingProducer(val producer: Producer,
                                .retryIfException()
                                .withStopStrategy(StopStrategies.stopAfterAttempt(5))
                                .build()): Producer by producer {
-    override fun write(messages: ByteBufferMessageSet): ProducerResponse =
+    override fun write(messagSes: ByteBufferMessageSet): ProducerResponse =
             retryer.call { producer.write(messages) }
 }
 

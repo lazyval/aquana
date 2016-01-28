@@ -17,7 +17,7 @@ import java.io.File
 import java.util.function.Function
 import javax.xml.bind.JAXB
 
-private val logger = LoggerFactory.getLogger("squirtl")
+private val logger = LoggerFactory.getLogger("squirtle")
 
 val offsetsFile = File("offsets.save")
 

@@ -10,7 +10,7 @@ import kafka.message.ByteBufferMessageSet
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicLong
 
-private val logger = LoggerFactory.getLogger("squirtl")
+private val logger = LoggerFactory.getLogger("squirtle")
 
 class RetryingConsumer(private val delegate: MonotonicConsumer,
                        val retryer: Retryer<ByteBufferMessageSet> = RetryerBuilder.newBuilder<ByteBufferMessageSet>()
