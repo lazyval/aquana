@@ -19,13 +19,6 @@ import javax.xml.bind.JAXB
 
 private val logger = LoggerFactory.getLogger("squirtl")
 
-val producersEntryPoint = "s-niagara04.nj01.303net.pvt"
-
-val consumersEntryPoint = "p-niagara01.ami.303net.pvt"
-
-//val fromTopic = "production-input-topic"
-//val toTopic = "production-input-topic"
-//val kafkaPort = 9093
 val offsetsFile = File("offsets.save")
 
 fun main(args : Array<String>) {
@@ -46,11 +39,11 @@ fun main(args : Array<String>) {
     opts.addOption(Option("skew", true, "cross-partition skew factor" ))
     val options = parser.parse(opts, args);
     val cfg = MirrorConfig(
-            HostPortTopic(options.getOptionValue("consumer", "s-niagara04.nj01.303net.pvt"),
+            HostPortTopic(options.getOptionValue("consumer"o),
                     options.getOptionValue("consumerPort", "9093").toInt(),
                     options.getOptionValue("consumerTopic", "production-input-topic")
             ),
-            HostPortTopic(options.getOptionValue("producer", "s-niagara04.nj01.303net.pvt"),
+            HostPortTopic(options.getOptionValue("producer"),
                     options.getOptionValue("producerPort", "9093").toInt(),
                     options.getOptionValue("producerTopic", "production-input-topic")
             ),
