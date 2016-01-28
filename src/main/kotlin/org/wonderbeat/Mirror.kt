@@ -47,8 +47,15 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     environment.setDispatcher("in-io-dispatcher", ThreadPoolExecutorDispatcher(cfg.threadCountIn, cfg.backlog, "io-input-pool"))
     environment.setDispatcher("out-io-dispatcher", ThreadPoolExecutorDispatcher(cfg.threadCountOut, cfg.backlog * 2, "io-output-pool"))
     val (consumerPartitionsLeaders, producerPartitionsLeaders) = StreamSupport.stream(listOf(
-            { SimpleConsumer(consumersEntryPoint, cfg.consumerEntryPoint.port, 9000, 1024 * 10, "squirtle-init").resolveLeaders(cfg.consumerEntryPoint.topic) },
-            { SimpleConsumer(producersEntryPoint, cfg.producerEntryPoint.port, 9000, 1024 * 10, "squirtle-init").resolveLeaders(cfg.producerEntryPoint.topic) } )
+            { SimpleConsumer(cfg.consumerEntryPoint.host,
+                    cfg.consumerEntryPoint.port,
+                    9000, 1024 * 10,
+                    "squirtle-init")
+                    .resolveLeaders(cfg.consumerEntryPoint.topic) },
+            { SimpleConsumer(cfg.producerEntryPoint.host,
+                    cfg.producerEntryPoint.port,
+                    9000, 1024 * 10,
+                    "squirtle-init").resolveLeaders(cfg.producerEntryPoint.topic) } )
             .toArrayList().spliterator(), true).map { it.invoke() }
             .collect(Collectors.toList()).toList() as List<Map<Int,String>>
     assert(consumerPartitionsLeaders.keys.size <= cfg.backlog)
@@ -83,10 +90,9 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
             { connection -> connection.close() })
     val (consumerPartitionsMeta, producerPartitionsMeta) = StreamSupport.stream(listOf(
                     { getPartitionsMeta(consumersPool, consumerPartitionsLeaders, cfg.consumerEntryPoint.topic)},
-                    { getPartitionsMeta(resolveProducerMetadataPool, producerPartitionsLeaders, cfg.producerEntryPoint.topic)}).toArrayList()
-            .spliterator(), true)
-                    .map { it.invoke() }
-                    .collect(Collectors.toList()).toList() as List<List<PartitionMeta>>
+                    { getPartitionsMeta(resolveProducerMetadataPool, producerPartitionsLeaders, cfg.producerEntryPoint.topic)})
+            .toArrayList().spliterator(), true).map { it.invoke() }
+            .collect(Collectors.toList()).toList() as List<List<PartitionMeta>>
     resolveProducerMetadataPool.close()
     val consumers = initConsumers(consumersPool, consumerPartitionsMeta, cfg.fetchSize, cfg.startFrom)
     val producers = initProducers(producersPool, producerPartitionsMeta)
