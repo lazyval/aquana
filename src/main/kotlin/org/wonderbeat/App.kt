@@ -39,7 +39,7 @@ fun main(args : Array<String>) {
     opts.addOption(Option("skew", true, "cross-partition skew factor" ))
     val options = parser.parse(opts, args);
     val cfg = MirrorConfig(
-            HostPortTopic(options.getOptionValue("consumer"o),
+            HostPortTopic(options.getOptionValue("consumer"),
                     options.getOptionValue("consumerPort", "9093").toInt(),
                     options.getOptionValue("consumerTopic", "production-input-topic")
             ),
