@@ -21,7 +21,7 @@ class RetryingProducer(val producer: Producer,
                                .retryIfException()
                                .withStopStrategy(StopStrategies.stopAfterAttempt(5))
                                .build()): Producer by producer {
-    override fun write(messagSes: ByteBufferMessageSet): ProducerResponse =
+    override fun write(messages: ByteBufferMessageSet): ProducerResponse =
             retryer.call { producer.write(messages) }
 }
 
