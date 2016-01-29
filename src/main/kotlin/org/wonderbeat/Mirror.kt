@@ -117,10 +117,9 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     val writeEvt = outIOEventBus.on(Selectors.`type`(WriteKafka::class.java), { input: Event<Ticket> ->
         val ticket = input.data
         val messages = ticket.messages
-        if (skewControl.isSkewed()) {
+        if (!skewControl.tryAdvance(ticket.reader.partition())) {
             outIOEventBus.notify(WriteKafka::class.java, input)
         } else {
-            skewControl.update(ticket.reader.partition())
             ticket.writer.write(messages)
             msgCount.addAndGet(messages.size().toLong())
             ticket.messages = emptyBuffer

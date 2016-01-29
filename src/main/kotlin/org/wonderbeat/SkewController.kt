@@ -4,6 +4,9 @@ import com.google.common.util.concurrent.RateLimiter
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicLong
 
+/**
+ * Kinda Monotonic checker
+ */
 class SkewController(val maxSkew: Int, val bucketsSize: Int) {
 
     private val logger = LoggerFactory.getLogger(SkewController::class.java)
@@ -12,18 +15,31 @@ class SkewController(val maxSkew: Int, val bucketsSize: Int) {
 
     private val buckets = bucketsSize.downTo(1).map { AtomicLong(0) }
 
-    fun update(bucket: Int) = buckets[bucket].incrementAndGet()
+    fun tryAdvance(bucket: Int): Boolean {
+        do {
+            val bucketVal = buckets[bucket].get()
+            val (isSkewed, state) = isSkewedWithState()
+            if(isSkewed) {
+                return false
+            }
+        } while(state[bucket] != bucketVal || !buckets[bucket].compareAndSet(bucketVal, bucketVal + 1))
+        return true
+    }
 
     fun isSkewed(): Boolean {
-        val minMax = buckets.fold(Pair(buckets.first().get(), buckets.first().get()), { acc, item ->
-            val itemVal = item.get()
-            Pair(if (acc.first < itemVal) acc.first else itemVal, if(acc.second > itemVal) acc.second else itemVal )
+        return isSkewedWithState().first
+    }
+
+    private fun isSkewedWithState(): Pair<Boolean, List<Long>> {
+        val state = buckets.map { it.get() }
+        val minMax = state.fold(Pair(state.first(), state.first()), { acc, item ->
+            Pair(if (acc.first < item) acc.first else item, if(acc.second > item) acc.second else item )
         })
         val skew = minMax.second - minMax.first > maxSkew
         if(skew && logger.isDebugEnabled && rateLimiter.tryAcquire()) {
             logSkewState(minMax.first)
         }
-        return skew
+        return Pair(skew, state)
     }
 
     private fun logSkewState(minBucketVal: Long) {
