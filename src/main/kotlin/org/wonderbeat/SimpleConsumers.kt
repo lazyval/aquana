@@ -21,7 +21,7 @@ enum class Position { BEGIN, END }
 
 fun SimpleConsumer.resolveOffsets(topic: String, partitions: List<Int>, position: Position): Map<Int, Long> {
     val position = if (position == Position.BEGIN) kafka.api.OffsetRequest.EarliestTime() else kafka.api.OffsetRequest.LatestTime()
-    val request = partitions.toMap({ TopicAndPartition(topic, it) }, { PartitionOffsetRequestInfo(position, 1) })
+    val request = partitions.toMapBy({ TopicAndPartition(topic, it) }, { PartitionOffsetRequestInfo(position, 1) })
     val response = this.getOffsetsBefore(OffsetRequest(
             ToScalaMap.toScalaMap(request), 0, Request
             .OrdinaryConsumerId()))

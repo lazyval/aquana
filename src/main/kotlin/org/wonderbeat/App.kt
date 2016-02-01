@@ -1,5 +1,8 @@
 package org.wonderbeat
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.github.rholder.retry.RetryerBuilder
 import com.github.rholder.retry.StopStrategies
 import org.apache.commons.cli.DefaultParser
@@ -14,12 +17,10 @@ import org.jenetics.util.Factory
 import org.jenetics.util.IO
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.time.LocalDateTime
 import java.util.function.Function
-import javax.xml.bind.JAXB
 
 private val logger = LoggerFactory.getLogger("squirtle")
-
-val offsetsFile = File("offsets.save")
 
 fun main(args : Array<String>) {
     val parser = DefaultParser();
@@ -55,8 +56,9 @@ fun main(args : Array<String>) {
             options.getOptionValue("backlog", 256.toString()).toInt(),
             options.getOptionValue("skew", 2.toString()).toInt()
     )
-    val retry = RetryerBuilder.newBuilder<Unit>().retryIfException().withStopStrategy(StopStrategies.neverStop()).build()
+    val retry = RetryerBuilder.newBuilder<Unit>().retryIfException().withStopStrategy(StopStrategies.stopAfterAttempt(10)).build()
     if(options.hasOption("genetics")) {
+        logger.info("Genetic test started")
         retry.call { genetics(cfg) }
         return
     }
@@ -66,7 +68,6 @@ fun main(args : Array<String>) {
 }
 
 fun genetics(cfg: MirrorConfig) {
-    logger.info("Genetic test started")
     val genotype: Factory<Genotype<IntegerGene>> = Genotype.of(
             IntegerChromosome.of(1024 * 1024, 1024 * 1024 * 30, 1), // socket read buffer
             IntegerChromosome.of(15, 100, 1), // thread pool IO-read
@@ -78,7 +79,8 @@ fun genetics(cfg: MirrorConfig) {
     )
     val engine = Engine.builder<IntegerGene, Int>(
             Function {
-                var offsetToStart = if (offsetsFile.exists()) startWithAvailableOffsets(loadOffsets()) else startWithRollback(30)
+                var offsetToStart = if (offsetsFile.exists()) startWithAvailableOffsets(loadOffsets().checkpoints.toMapBy({it.partition}, {it.offset})) else
+                    startWithRollback(30)
                 val result = run(
                         MirrorConfig(cfg.consumerEntryPoint,
                                 cfg.producerEntryPoint,
@@ -91,7 +93,7 @@ fun genetics(cfg: MirrorConfig) {
                                 it.get(5,0).allele,
                                 offsetToStart,
                                 120000))
-                //   persistOffsets(result.consumerPartitionStat)
+                persistOffsets(CheckPoint(result.consumerPartitionStat.toList().map { PartitionCheckpoint(it.first, it.second.endOffset) }))
                 result.messagesPerSecondTotal
             }, genotype)
             .alterers(SinglePointCrossover<IntegerGene, Int>(0.2), GaussianMutator<IntegerGene, Int>())
@@ -114,5 +116,9 @@ fun genetics(cfg: MirrorConfig) {
     }
 }
 
-fun persistOffsets(offsetStats: Map<Int, OffsetStatistics>) = JAXB.marshal(offsetStats.mapValues { it.value.endOffset }, offsetsFile)
-fun loadOffsets() = JAXB.unmarshal(offsetsFile, Map::class.java) as Map<Int, Long>
+val offsetsFile = File("checkpoint.save")
+val mapper = ObjectMapper().registerKotlinModule().registerModule(JavaTimeModule())
+data class PartitionCheckpoint(val partition: Int, val offset: Long)
+data class CheckPoint(val checkpoints: List<PartitionCheckpoint>, val timestamp : LocalDateTime = LocalDateTime.now())
+fun persistOffsets(checkpoint: CheckPoint) = mapper.writeValue(offsetsFile, checkpoint)
+fun loadOffsets() = mapper.readValue(offsetsFile, CheckPoint::class.java)
