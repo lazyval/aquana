@@ -29,7 +29,7 @@ class MonotonicConcurrentConsumer(val consumer: PoolAwareConsumer, var offset: A
             messages = consumer.fetch(ofst)
             val size = if(messages == null) 0 else messages.size()
             val inTime = offset.compareAndSet(ofst, ofst + size)
-            if(!inTime) {
+            if(!inTime && logger.isInfoEnabled) {
                 logger.info("Fetch took too long for $consumer")
             }
         } while(messages == null || !inTime)

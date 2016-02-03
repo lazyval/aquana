@@ -45,7 +45,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     logger.debug("About to start: $cfg")
     val environment = Environment(mapOf(Pair(Environment.THREAD_POOL, ThreadPoolExecutorDispatcher(4, 4, "work-pool"))), PropertiesConfigurationReader())
     environment.setDispatcher("in-io-dispatcher", ThreadPoolExecutorDispatcher(cfg.threadCountIn, cfg.backlog, "io-input-pool"))
-    environment.setDispatcher("out-io-dispatcher", ThreadPoolExecutorDispatcher(cfg.threadCountOut, cfg.backlog * 2, "io-output-pool"))
+    environment.setDispatcher("out-io-dispatcher", ThreadPoolExecutorDispatcher(cfg.threadCountOut, cfg.backlog, "io-output-pool"))
     val (consumerPartitionsLeaders, producerPartitionsLeaders) = StreamSupport.stream(listOf(
             { SimpleConsumer(cfg.consumerEntryPoint.host,
                     cfg.consumerEntryPoint.port,
@@ -105,7 +105,6 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     val inIOEventBus = EventBus(environment.getDispatcher("in-io-dispatcher"), null, null, { stopPromise.tryOnError(it) } )
     val outIOEventBus = EventBus(environment.getDispatcher("out-io-dispatcher"), null, null, { stopPromise.tryOnError(it) })
 
-
     val readEvt = inIOEventBus.on(Selectors.`type`(ReadKafka::class.java), { input: Event<Ticket> ->
         val ticket = input.data
         input.data.messages = ticket.reader.fetch()
@@ -128,7 +127,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     })
 
     val startedTime = System.currentTimeMillis()
-    val partitionsFitsBacklog = (cfg.backlog * 1F / consumerPartitionsLeaders.keys.size.toFloat()).toInt()
+    val partitionsFitsBacklog: Int = cfg.backlog / consumerPartitionsLeaders.size
     partitionsFitsBacklog.downTo(1).forEach { i ->
         logger.debug("Submitting tickets - round $i")
         consumerPartitionsLeaders.keys.forEach { num ->
@@ -165,6 +164,6 @@ fun <O> Promise<O>.tryOnError(error: Throwable) {
     try {
         this.onError(error)
     } catch(ex: IllegalStateException) {
-        // do nothing
+        logger.trace("Promise already resolved")
     }
 }

@@ -26,18 +26,18 @@ fun main(args : Array<String>) {
     val parser = DefaultParser();
     val opts = Options()
     opts.addOption(Option("genetics", "run genetics tests" ))
-    opts.addOption(Option("consumer", true, "consumer entry point" ))
-    opts.addOption(Option("consumerPort", true, "consumer port" ))
-    opts.addOption(Option("consumerTopic", true, "consumer topic" ))
-    opts.addOption(Option("producer", true, "producer entry point" ))
-    opts.addOption(Option("producerPort", true, "producer port" ))
-    opts.addOption(Option("producerTopic", true, "producer topic" ))
-    opts.addOption(Option("input", true, "input thread pool size" ))
-    opts.addOption(Option("output", true, "output thread pool size" ))
-    opts.addOption(Option("buffer", true, "fetch size bytes" ))
-    opts.addOption(Option("connections", true, "max connections per host" ))
-    opts.addOption(Option("backlog", true, "thread pool backlog" ))
-    opts.addOption(Option("skew", true, "cross-partition skew factor" ))
+    opts.addOption(Option("consumer", true, "[String] consumer entry point. IP or hostname" ))
+    opts.addOption(Option("consumerPort", true, "[Int] consumer port" ))
+    opts.addOption(Option("consumerTopic", true, "[String] consumer topic" ))
+    opts.addOption(Option("producer", true, "[String] producer entry point" ))
+    opts.addOption(Option("producerPort", true, "[Int] producer port" ))
+    opts.addOption(Option("producerTopic", true, "[String] producer topic" ))
+    opts.addOption(Option("input", true, "[Int] Consumer thread pool size" ))
+    opts.addOption(Option("output", true, "[Int] Producer thread pool size" ))
+    opts.addOption(Option("buffer", true, "[Int] Consumer fetch size bytes" ))
+    opts.addOption(Option("connections", true, "[Int] Max connections per host" ))
+    opts.addOption(Option("backlog", true, "[Int] thread pool backlog" ))
+    opts.addOption(Option("skew", true, "[Int] cross-partition skew factor" ))
     val options = parser.parse(opts, args);
     val cfg = MirrorConfig(
             HostPortTopic(options.getOptionValue("consumer"),
@@ -72,8 +72,8 @@ fun genetics(cfg: MirrorConfig) {
             IntegerChromosome.of(1024 * 1024, 1024 * 1024 * 30, 1), // socket read buffer
             IntegerChromosome.of(15, 100, 1), // thread pool IO-read
             IntegerChromosome.of(2, 20, 1), // thread pool IO-write
-            IntegerChromosome.of(1024 * 1024 * 1, 1024 * 1024 * 60, 1), // fetchSize
-            IntegerChromosome.of(2, 7), // connections buffer
+            IntegerChromosome.of(1024 * 1024 * 1, 1024 * 1024 * 40, 1), // fetchSize
+            IntegerChromosome.of(2, 10), // connections buffer
             IntegerChromosome.of(7, 10), // backlog 2^x
             IntegerChromosome.of(1, 10) // max skew factor
     )

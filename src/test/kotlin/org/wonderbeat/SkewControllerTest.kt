@@ -16,5 +16,15 @@ class SkewControllerTest {
         assertTrue { controller.isSkewed() }
     }
 
+    @Test fun testAdvance() {
+        val controller = SkewController(2,2)
+        assert(controller.tryAdvance(1))
+        controller.tryAdvance(1)
+        controller.tryAdvance(1)
+        assertTrue { controller.isSkewed() }
+        assertFalse(controller.tryAdvance(1))
+        assertTrue(controller.tryAdvance(0))
+    }
+
 }
 

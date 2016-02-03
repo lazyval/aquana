@@ -18,19 +18,20 @@ class SkewController(val maxSkew: Int, val bucketsSize: Int) {
     fun tryAdvance(bucket: Int): Boolean {
         do {
             val bucketVal = buckets[bucket].get()
-            val (isSkewed, state) = isSkewedWithState()
-            if(isSkewed) {
+            val skewState = isSkewedWithState()
+            if(skewState.isSkewed && bucketVal == skewState.max) {
                 return false
             }
-        } while(state[bucket] != bucketVal || !buckets[bucket].compareAndSet(bucketVal, bucketVal + 1))
+        } while(skewState.bucketState[bucket] != bucketVal || !buckets[bucket].compareAndSet(bucketVal, bucketVal + 1))
         return true
     }
 
     fun isSkewed(): Boolean {
-        return isSkewedWithState().first
+        return isSkewedWithState().isSkewed
     }
 
-    private fun isSkewedWithState(): Pair<Boolean, List<Long>> {
+    private data class SkewState(val isSkewed: Boolean, val bucketState: List<Long>, val min: Long, val max: Long)
+    private fun isSkewedWithState(): SkewState {
         val state = buckets.map { it.get() }
         val minMax = state.fold(Pair(state.first(), state.first()), { acc, item ->
             Pair(if (acc.first < item) acc.first else item, if(acc.second > item) acc.second else item )
@@ -39,7 +40,7 @@ class SkewController(val maxSkew: Int, val bucketsSize: Int) {
         if(skew && logger.isDebugEnabled && rateLimiter.tryAcquire()) {
             logSkewState(minMax.first)
         }
-        return Pair(skew, state)
+        return SkewState(skew, state, minMax.first, minMax.second)
     }
 
     private fun logSkewState(minBucketVal: Long) {
