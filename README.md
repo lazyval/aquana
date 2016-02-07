@@ -1,6 +1,9 @@
 # squirtle
 Squirtle Kafka Mirror
-![Squirtle-Squirtle](http://vignette2.wikia.nocookie.net/pokemon/images/3/32/007Squirtle_AG_anime.png/revision/latest?cb=20140916184312)
+
+<img src="http://vignette2.wikia.nocookie.net/pokemon/images/3/32/007Squirtle_AG_anime.png/revision/latest?cb=20140916184312" width="250px">
+
+
 ```
 usage: squirtle
  -backlog <arg>         [Int] Optional. Thread pool backlog. Backpressure
