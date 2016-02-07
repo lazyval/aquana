@@ -6,6 +6,7 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.github.rholder.retry.RetryerBuilder
 import com.github.rholder.retry.StopStrategies
 import org.apache.commons.cli.DefaultParser
+import org.apache.commons.cli.HelpFormatter
 import org.apache.commons.cli.Option
 import org.apache.commons.cli.Options
 import org.jenetics.*
@@ -25,36 +26,49 @@ private val logger = LoggerFactory.getLogger("squirtle")
 fun main(args : Array<String>) {
     val parser = DefaultParser();
     val opts = Options()
-    opts.addOption(Option("genetics", "run genetics tests" ))
-    opts.addOption(Option("consumer", true, "[String] consumer entry point. IP or hostname" ))
-    opts.addOption(Option("consumerPort", true, "[Int] consumer port" ))
-    opts.addOption(Option("consumerTopic", true, "[String] consumer topic" ))
-    opts.addOption(Option("producer", true, "[String] producer entry point" ))
-    opts.addOption(Option("producerPort", true, "[Int] producer port" ))
-    opts.addOption(Option("producerTopic", true, "[String] producer topic" ))
-    opts.addOption(Option("input", true, "[Int] Consumer thread pool size" ))
-    opts.addOption(Option("output", true, "[Int] Producer thread pool size" ))
-    opts.addOption(Option("buffer", true, "[Int] Consumer fetch size bytes" ))
-    opts.addOption(Option("connections", true, "[Int] Max connections per host" ))
-    opts.addOption(Option("backlog", true, "[Int] thread pool backlog" ))
-    opts.addOption(Option("skew", true, "[Int] cross-partition skew factor" ))
+    opts.addOption(Option("genetics", "Genetic tests mode to find the best configuration. Only 'consumer' and 'producer' options required"))
+    opts.addOption(Option("consumer", true, "[String] Source Kafka ip address. Any node from cluster" ))
+    val defaultPort = 9093
+    opts.addOption(Option("consumerPort", true, "[Int] Optional. Source Kafka port. Default: $defaultPort" ))
+    opts.addOption(Option("consumerTopic", true, "[String] Source Kafka topic" ))
+    opts.addOption(Option("producer", true, "[String] Destination Kafka ip address" ))
+    opts.addOption(Option("producerPort", true, "[Int] Optional. Destination Kafka port. Default: $defaultPort" ))
+    opts.addOption(Option("producerTopic", true, "[String] Optional. Destination Kafka topic. Default: consumerTopic" ))
+    val defaultPoolSize = 10
+    opts.addOption(Option("inputPool", true, "[Int] Optional. Consumer thread pool size. Default: $defaultPoolSize" ))
+    opts.addOption(Option("outputPool", true, "[Int] Optional. Producer thread pool size. Default: $defaultPoolSize" ))
+    val defaultTcpBuffer = 1024 * 1024 * 2
+    opts.addOption(Option("tcpBuffer", true, "[Int] Optional Tcp socket buffer. Default $defaultTcpBuffer bytes" ))
+    val defaultBuffer = 1024 * 1024 * 10
+    opts.addOption(Option("buffer", true, "[Int] Optional. Consumer fetch size bytes. Default: $defaultBuffer" ))
+    val defaultConnections = 3
+    opts.addOption(Option("connections", true, "[Int] Optional. Max connections per host. Squirtle maintains connection pool for every " +
+            "node in source/destination Kafka cluster. Default: $defaultConnections"))
+    val defaultBacklog = 256
+    opts.addOption(Option("backlog", true, "[Int] Optional. Thread pool backlog. Backpressure for consumer/producer stream. Default: " +
+            "$defaultBacklog"))
+    val defaultSkew = 2
+    opts.addOption(Option("skew", true, "[Int] Optional. Cross-partition skew factor. Specifies how many batches could one partition be " +
+            "ahead of another while mirroring. 1 - if you want all partitions to be mirrored evenly. Default $defaultSkew"))
+    val formatter = HelpFormatter();
+    formatter.printHelp( "squirtle", opts);
     val options = parser.parse(opts, args);
     val cfg = MirrorConfig(
             HostPortTopic(options.getOptionValue("consumer"),
-                    options.getOptionValue("consumerPort", "9093").toInt(),
+                    options.getOptionValue("consumerPort", defaultPort.toString()).toInt(),
                     options.getOptionValue("consumerTopic", "production-input-topic")
             ),
             HostPortTopic(options.getOptionValue("producer"),
-                    options.getOptionValue("producerPort", "9093").toInt(),
+                    options.getOptionValue("producerPort", defaultPort.toString()).toInt(),
                     options.getOptionValue("producerTopic", "production-input-topic")
             ),
-            options.getOptionValue("buffer", (1024 * 1024 * 10).toString()).toInt(),
-            options.getOptionValue("input", 20.toString()).toInt(),
-            options.getOptionValue("output", 20.toString()).toInt(),
-            options.getOptionValue("buffer", (1024 * 1024 * 10).toString()).toInt(),
-            options.getOptionValue("connections", 3.toString()).toInt(),
-            options.getOptionValue("backlog", 256.toString()).toInt(),
-            options.getOptionValue("skew", 2.toString()).toInt()
+            options.getOptionValue("tcpBuffer", defaultTcpBuffer.toString()).toInt(),
+            options.getOptionValue("inputPool", defaultPoolSize.toString()).toInt(),
+            options.getOptionValue("outputPool", defaultPoolSize.toString()).toInt(),
+            options.getOptionValue("buffer", defaultBuffer.toString()).toInt(),
+            options.getOptionValue("connections", defaultConnections.toString()).toInt(),
+            options.getOptionValue("backlog", defaultBacklog.toString()).toInt(),
+            options.getOptionValue("skew", defaultSkew.toString()).toInt()
     )
     val retry = RetryerBuilder.newBuilder<Unit>().retryIfException().withStopStrategy(StopStrategies.stopAfterAttempt(10)).build()
     if(options.hasOption("genetics")) {
@@ -75,7 +89,7 @@ fun genetics(cfg: MirrorConfig) {
             IntegerChromosome.of(1024 * 1024 * 1, 1024 * 1024 * 40, 1), // fetchSize
             IntegerChromosome.of(2, 10), // connections buffer
             IntegerChromosome.of(7, 10), // backlog 2^x
-            IntegerChromosome.of(1, 10) // max skew factor
+            IntegerChromosome.of(1, 5) // max skew factor
     )
     val engine = Engine.builder<IntegerGene, Int>(
             Function {
@@ -92,7 +106,7 @@ fun genetics(cfg: MirrorConfig) {
                                 Math.pow(2.toDouble(), it.get(5, 0).allele.toDouble()).toInt(),
                                 it.get(5,0).allele,
                                 offsetToStart,
-                                120000))
+                                60000))
                 persistOffsets(CheckPoint(result.consumerPartitionStat.toList().map { PartitionCheckpoint(it.first, it.second.endOffset) }))
                 result.messagesPerSecondTotal
             }, genotype)
