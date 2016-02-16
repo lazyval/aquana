@@ -4,6 +4,7 @@ import kafka.api.OffsetRequest
 import kafka.api.PartitionOffsetRequestInfo
 import kafka.api.Request
 import kafka.api.TopicMetadataRequest
+import kafka.common.ErrorMapping
 import kafka.common.TopicAndPartition
 import kafka.consumer.SimpleConsumer
 import scala.collection.JavaConversions.*
@@ -22,9 +23,10 @@ enum class Position { BEGIN, END }
 fun SimpleConsumer.resolveOffsets(topic: String, partitions: List<Int>, position: Position): Map<Int, Long> {
     val position = if (position == Position.BEGIN) kafka.api.OffsetRequest.EarliestTime() else kafka.api.OffsetRequest.LatestTime()
     val request = partitions.associateBy({ TopicAndPartition(topic, it) }, { PartitionOffsetRequestInfo(position, 1) })
-    val response = this.getOffsetsBefore(OffsetRequest(
-            ToScalaMap.toScalaMap(request), 0, Request
-            .OrdinaryConsumerId()))
+    val response = this.getOffsetsBefore(OffsetRequest(ToScalaMap.toScalaMap(request), 0, Request.OrdinaryConsumerId()))
+    if(response.hasError()) {
+        throw asJavaMap(response.partitionErrorAndOffsets()).map { ErrorMapping.exceptionFor(it.value.error()) }.first()
+    }
     return asJavaMap(response.partitionErrorAndOffsets())
             .mapKeys { it.key.partition() }
             .mapValues { asJavaList<Long>(it.value.offsets() as Seq<Long>).first() }
