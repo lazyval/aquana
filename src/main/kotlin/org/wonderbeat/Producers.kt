@@ -29,6 +29,8 @@ class PoolAwareProducer(val topic: String,
                         val partition: Int,
                         private val producerPool: PartitionConnectionPool<SyncProducer>): Producer {
 
+    override fun partition(): Int = partition;
+
     private val correlationId = AtomicInteger(0)
 
     override fun write(messages: ByteBufferMessageSet): ProducerResponse {
@@ -50,5 +52,6 @@ class PoolAwareProducer(val topic: String,
 }
 
 interface Producer {
+    fun partition(): Int
     fun write(messages: ByteBufferMessageSet): ProducerResponse
 }

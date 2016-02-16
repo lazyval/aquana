@@ -34,6 +34,7 @@ data class MirrorConfig(val consumerEntryPoint: HostPortTopic,
                         val readBuffer: Int, val threadCountIn: Int, val threadCountOut: Int,
                         val fetchSize: Int, val connectionsMax: Int,
                         val backlog: Int, val skewFactor: Int,
+                        val onlyPartitions: List<Int>? = null,
                         val startFrom: (PartitionMeta) -> Long = startFromTheEnd,
                         val timeoutMillis: Long = -1)
 
@@ -56,7 +57,9 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
                     cfg.producerEntryPoint.port,
                     9000, 1024 * 10,
                     "squirtle-init").resolveLeaders(cfg.producerEntryPoint.topic) } )
-            .toArrayList().spliterator(), true).map { it.invoke() }
+            .toArrayList().spliterator(), true)
+            .map { it.invoke() }
+            .map { if(cfg.onlyPartitions != null) { it.filterKeys { cfg.onlyPartitions.contains(it) } } else it }
             .collect(Collectors.toList()).toList() as List<Map<Int,String>>
     assert(consumerPartitionsLeaders.keys.size <= cfg.backlog)
 
@@ -91,7 +94,8 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     val (consumerPartitionsMeta, producerPartitionsMeta) = StreamSupport.stream(listOf(
                     { getPartitionsMeta(consumersPool, consumerPartitionsLeaders, cfg.consumerEntryPoint.topic)},
                     { getPartitionsMeta(resolveProducerMetadataPool, producerPartitionsLeaders, cfg.producerEntryPoint.topic)})
-            .toArrayList().spliterator(), true).map { it.invoke() }
+            .toArrayList().spliterator(), true)
+            .map { it.invoke() }
             .collect(Collectors.toList()).toList() as List<List<PartitionMeta>>
     resolveProducerMetadataPool.close()
     val consumers = initConsumers(consumersPool, consumerPartitionsMeta, cfg.fetchSize, cfg.startFrom)
@@ -111,7 +115,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
         outIOEventBus.notify(WriteKafka::class.java, input)
     })
 
-    val skewControl = SkewController(cfg.skewFactor, consumers.size)
+    val skewControl = SkewController(cfg.skewFactor, consumers.map { it.partition() })
     val msgCount = AtomicLong(0)
     val writeEvt = outIOEventBus.on(Selectors.`type`(WriteKafka::class.java), { input: Event<Ticket> ->
         val ticket = input.data
@@ -132,8 +136,8 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
         logger.debug("Submitting tickets - round $i")
         consumerPartitionsLeaders.keys.forEach { num ->
             inIOEventBus.notify(ReadKafka::class.java, Event.wrap(Ticket(
-                    consumers[num],
-                    producers[num]
+                    consumers.find { it.partition() == num }!!,
+                    producers.find { it.partition() == num }!!
             )))
         }
     }

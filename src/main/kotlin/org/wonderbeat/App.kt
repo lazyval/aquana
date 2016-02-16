@@ -50,9 +50,14 @@ fun main(args : Array<String>) {
     val defaultSkew = 2
     opts.addOption(Option("skew", true, "[Int] Optional. Cross-partition skew factor. Specifies how many batches could one partition be " +
             "ahead of another while mirroring. 1 - if you want all partitions to be mirrored evenly. Default $defaultSkew"))
-    val formatter = HelpFormatter();
-    formatter.printHelp( "squirtle", opts);
+    opts.addOption(Option("partitions", true, "[List[Int]] - Optional. Partition numbers to mirror separated by ','"))
+    opts.addOption(Option("help", false, "Show this message"))
     val options = parser.parse(opts, args);
+    if(options.hasOption("help") || args.size == 1) {
+        val formatter = HelpFormatter();
+        formatter.printHelp( "squirtle", opts);
+        return;
+    }
     val cfg = MirrorConfig(
             HostPortTopic(options.getOptionValue("consumer"),
                     options.getOptionValue("consumerPort", defaultPort.toString()).toInt(),
@@ -68,7 +73,8 @@ fun main(args : Array<String>) {
             options.getOptionValue("buffer", defaultBuffer.toString()).toInt(),
             options.getOptionValue("connections", defaultConnections.toString()).toInt(),
             options.getOptionValue("backlog", defaultBacklog.toString()).toInt(),
-            options.getOptionValue("skew", defaultSkew.toString()).toInt()
+            options.getOptionValue("skew", defaultSkew.toString()).toInt(),
+            options.getOptionValue("partitions")?.split(",")?.map { it.trim().toInt() }
     )
     val retry = RetryerBuilder.newBuilder<Unit>().retryIfException().withStopStrategy(StopStrategies.stopAfterAttempt(10)).build()
     if(options.hasOption("genetics")) {
@@ -105,8 +111,8 @@ fun genetics(cfg: MirrorConfig) {
                                 it.get(4, 0).allele,
                                 Math.pow(2.toDouble(), it.get(5, 0).allele.toDouble()).toInt(),
                                 it.get(5,0).allele,
-                                offsetToStart,
-                                60000))
+                                startFrom = offsetToStart,
+                                timeoutMillis = 60000))
                 persistOffsets(CheckPoint(result.consumerPartitionStat.toList().map { PartitionCheckpoint(it.first, it.second.endOffset) }))
                 result.messagesPerSecondTotal
             }, genotype)

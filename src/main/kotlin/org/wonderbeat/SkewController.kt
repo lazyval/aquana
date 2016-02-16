@@ -7,22 +7,24 @@ import java.util.concurrent.atomic.AtomicLong
 /**
  * Kinda Monotonic checker
  */
-class SkewController(val maxSkew: Int, val bucketsSize: Int) {
+class SkewController(val maxSkew: Int, val bucketsIds: List<Int>) {
 
     private val logger = LoggerFactory.getLogger(SkewController::class.java)
 
     private val rateLimiter = RateLimiter.create(0.05)
 
-    private val buckets = bucketsSize.downTo(1).map { AtomicLong(0) }
+    private val buckets = (1..bucketsIds.sortedDescending().first()).map { AtomicLong(0) }
 
-    fun tryAdvance(bucket: Int): Boolean {
+    fun tryAdvance(bucketId: Int): Boolean {
+        val bucketPosition = bucketsIds.indexOf(bucketId)
+        val bucket = buckets[bucketPosition]
         do {
-            val bucketVal = buckets[bucket].get()
+            val bucketVal = bucket.get()
             val skewState = isSkewedWithState()
             if(skewState.isSkewed && bucketVal == skewState.max) {
                 return false
             }
-        } while(skewState.bucketState[bucket] != bucketVal || !buckets[bucket].compareAndSet(bucketVal, bucketVal + 1))
+        } while(skewState.bucketState[bucketPosition] != bucketVal || !bucket.compareAndSet(bucketVal, bucketVal + 1))
         return true
     }
 
@@ -47,7 +49,7 @@ class SkewController(val maxSkew: Int, val bucketsSize: Int) {
         val statStrings = printVertically(buckets.mapIndexed { i, value ->
             val skewSize = (value.get() - minBucketVal).toInt()
             val normalized = if(skewSize == 0) 0 else (((maxSkew.toDouble() + 1) / skewSize ) * 10).toInt()
-            "$i".padEnd(3, ' ').padEnd(normalized, 'x')
+            "${bucketsIds[i]}".padEnd(3, ' ').padEnd(normalized, 'x')
         }, 100)
         logger.debug("Skew detected\n$statStrings")
     }

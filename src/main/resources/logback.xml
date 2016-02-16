@@ -20,7 +20,7 @@
         </encoder>
     </appender>
 
-    <logger name="com.vasilich" level="debug" additivity="false">
+    <logger name="org.wonderbeat" level="debug" additivity="false">
         <appender-ref ref="CONSOLE" />
     </logger>
 
