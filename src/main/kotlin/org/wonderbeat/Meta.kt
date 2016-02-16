@@ -7,7 +7,7 @@ data class PartitionMeta(val topic: String, val partition: Int,
 
 fun getPartitionsMeta(consumersPool: ConnectionsPool<SimpleConsumer>, leaders: Map<Int, String>, topic: String):
         List<PartitionMeta> {
-    fun tryResolve<T>(funct: (consumer: SimpleConsumer) -> T, host: String): T {
+    fun <T> tryResolve(funct: (consumer: SimpleConsumer) -> T, host: String): T {
         val connectionPool = consumersPool.hostToConnection[host]!!
         val consumer = connectionPool.borrowObject()!!
         try {

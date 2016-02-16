@@ -12,7 +12,7 @@ fun initConsumers(pool: ConnectionsPool<SimpleConsumer>,
                   fetchSize: Int = 1024 * 1024 * 7,
                   startFromOffset: (PartitionMeta) -> Long = startFromTheEnd
 ): List<MonotonicConsumer> {
-    val consumerLeaders = partitionsMeta.toMapBy({it.partition}, {it.leader})
+    val consumerLeaders = partitionsMeta.associateBy({it.partition}, {it.leader})
     logger.debug("Consumer Leaders: $consumerLeaders")
     return partitionsMeta.map {
         RetryingConsumer(MonotonicConcurrentConsumer(
@@ -32,7 +32,7 @@ fun startWithAvailableOffsets(offsets: Map<Int, Long>, fallback: (PartitionMeta)
 
 fun initProducers(pool: ConnectionsPool<SyncProducer>,
                   partitionsMeta: List<PartitionMeta>): List<Producer> {
-    val producerLeaders = partitionsMeta.toMapBy({it.partition}, {it.leader})
+    val producerLeaders = partitionsMeta.associateBy({it.partition}, {it.leader})
     logger.debug("Producer Leaders: $producerLeaders")
     return  partitionsMeta.map {
         RetryingProducer(PoolAwareProducer(it.topic, it.partition, PartitionConnectionPool(pool,

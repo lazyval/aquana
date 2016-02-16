@@ -57,10 +57,10 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
                     cfg.producerEntryPoint.port,
                     9000, 1024 * 10,
                     "squirtle-init").resolveLeaders(cfg.producerEntryPoint.topic) } )
-            .toArrayList().spliterator(), true)
+            .toCollection(ArrayList()).spliterator(), true)
             .map { it.invoke() }
             .map { if(cfg.onlyPartitions != null) { it.filterKeys { cfg.onlyPartitions.contains(it) } } else it }
-            .collect(Collectors.toList()).toList() as List<Map<Int,String>>
+            .collect(Collectors.toList<Map<Int,String>>()).toList()
     assert(consumerPartitionsLeaders.keys.size <= cfg.backlog)
 
     val producersPool = ConnectionsPool(producerPartitionsLeaders.values.toSet(),
@@ -94,13 +94,13 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     val (consumerPartitionsMeta, producerPartitionsMeta) = StreamSupport.stream(listOf(
                     { getPartitionsMeta(consumersPool, consumerPartitionsLeaders, cfg.consumerEntryPoint.topic)},
                     { getPartitionsMeta(resolveProducerMetadataPool, producerPartitionsLeaders, cfg.producerEntryPoint.topic)})
-            .toArrayList().spliterator(), true)
+            .toCollection(ArrayList()).spliterator(), true)
             .map { it.invoke() }
-            .collect(Collectors.toList()).toList() as List<List<PartitionMeta>>
+            .collect(Collectors.toList<List<PartitionMeta>>()).toList()
     resolveProducerMetadataPool.close()
     val consumers = initConsumers(consumersPool, consumerPartitionsMeta, cfg.fetchSize, cfg.startFrom)
     val producers = initProducers(producersPool, producerPartitionsMeta)
-    val offsetWeStartWith = consumers.toMapBy({it.partition()}, {it.offset()})
+    val offsetWeStartWith = consumers.associateBy({it.partition()}, {it.offset()})
 
     class ReadKafka
     class WriteKafka
@@ -158,7 +158,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     consumersPool.close()
     logger.info("Wrote $finalCount messages, ${perMillis * 1000} msg per second")
     return MirrorStatistics(consumerPartitionsMeta
-            .toMapBy ({ it.partition }, { p -> OffsetStatistics(offsetWeStartWith[p.partition]!!,
+            .associateBy({ it.partition }, { p -> OffsetStatistics(offsetWeStartWith[p.partition]!!,
                     consumers.find { it.partition() == p.partition }!!.offset())}),
                     (perMillis * 1000).toInt())
 }

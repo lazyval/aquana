@@ -2,7 +2,6 @@ package org.wonderbeat
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.github.rholder.retry.RetryerBuilder
 import com.github.rholder.retry.StopStrategies
 import org.apache.commons.cli.DefaultParser
@@ -99,7 +98,8 @@ fun genetics(cfg: MirrorConfig) {
     )
     val engine = Engine.builder<IntegerGene, Int>(
             Function {
-                var offsetToStart = if (offsetsFile.exists()) startWithAvailableOffsets(loadOffsets().checkpoints.toMapBy({it.partition}, {it.offset})) else
+                var offsetToStart = if (offsetsFile.exists()) startWithAvailableOffsets(
+                        loadOffsets().checkpoints.associateBy({it.partition }, {it.offset})) else
                     startWithRollback(30)
                 val result = run(
                         MirrorConfig(cfg.consumerEntryPoint,
@@ -137,8 +137,8 @@ fun genetics(cfg: MirrorConfig) {
 }
 
 val offsetsFile = File("checkpoint.save")
-val mapper = ObjectMapper().registerKotlinModule().registerModule(JavaTimeModule())
+val mapper = ObjectMapper().registerModule(JavaTimeModule())
 data class PartitionCheckpoint(val partition: Int, val offset: Long)
 data class CheckPoint(val checkpoints: List<PartitionCheckpoint>, val timestamp : LocalDateTime = LocalDateTime.now())
 fun persistOffsets(checkpoint: CheckPoint) = mapper.writeValue(offsetsFile, checkpoint)
-fun loadOffsets() = mapper.readValue(offsetsFile, CheckPoint::class.java)
+fun loadOffsets(): CheckPoint = mapper.readValue(offsetsFile, CheckPoint::class.java)

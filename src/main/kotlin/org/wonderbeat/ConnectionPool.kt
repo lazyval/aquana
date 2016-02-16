@@ -36,7 +36,7 @@ class ConnectionsPool<T>(hostList: Collection<String>,
 
     fun close() = hostToConnection.forEach { it.value.close() }
 
-    val hostToConnection: Map<String, ObjectPool<T>> = hostList.toMapBy({it},
+    val hostToConnection: Map<String, ObjectPool<T>> = hostList.associateBy({it},
             { a -> GenericObjectPool<T>(internalFactory(a), poolCfg)})
 
 }
