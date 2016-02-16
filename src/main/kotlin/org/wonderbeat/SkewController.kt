@@ -13,7 +13,7 @@ class SkewController(val maxSkew: Int, val bucketsIds: List<Int>) {
 
     private val rateLimiter = RateLimiter.create(0.05)
 
-    private val buckets = (1..bucketsIds.sortedDescending().first()).map { AtomicLong(0) }
+    private val buckets = (1..bucketsIds.size).map { AtomicLong(0) }
 
     fun tryAdvance(bucketId: Int): Boolean {
         val bucketPosition = bucketsIds.indexOf(bucketId)
