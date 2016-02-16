@@ -60,11 +60,11 @@ fun main(args : Array<String>) {
     val cfg = MirrorConfig(
             HostPortTopic(options.getOptionValue("consumer"),
                     options.getOptionValue("consumerPort", defaultPort.toString()).toInt(),
-                    options.getOptionValue("consumerTopic", "production-input-topic")
+                    options.getOptionValue("consumerTopic")
             ),
             HostPortTopic(options.getOptionValue("producer"),
                     options.getOptionValue("producerPort", defaultPort.toString()).toInt(),
-                    options.getOptionValue("producerTopic", "production-input-topic")
+                    options.getOptionValue("producerTopic")
             ),
             options.getOptionValue("tcpBuffer", defaultTcpBuffer.toString()).toInt(),
             options.getOptionValue("inputPool", defaultPoolSize.toString()).toInt(),
