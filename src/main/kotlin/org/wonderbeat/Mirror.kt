@@ -60,14 +60,14 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
             .toCollection(ArrayList()).spliterator(), true)
             .map { it.invoke() }
             .map { if(cfg.onlyPartitions != null) { it.filterKeys { cfg.onlyPartitions.contains(it) } } else it }
-            .collect(Collectors.toList<Map<Int,String>>()).toList()
+            .collect(Collectors.toList<Map<Int,HostPort>>()).toList()
     assert(consumerPartitionsLeaders.keys.size <= cfg.backlog)
 
     val producersPool = ConnectionsPool(producerPartitionsLeaders.values.toSet(),
-            { host ->
+            { hostPort ->
                 val p = Properties()
-                p.put("host", host)
-                p.put("port", cfg.producerEntryPoint.port.toString())
+                p.put("host", hostPort)
+                p.put("port", hostPort)
                 p.put("socket.timeout.ms", 3000)
                 p.put("send.buffer.bytes", (3*1024*1024).toString() )
                 SyncProducer(SyncProducerConfig(p)) },
@@ -80,7 +80,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
                 poolCfg
             }.invoke())
     val consumersPool = ConnectionsPool(consumerPartitionsLeaders.values.toSet(),
-            { host -> SimpleConsumer(host, cfg.consumerEntryPoint.port, 2000, cfg.readBuffer, "squirtle-consumer") },
+            { hostPort -> SimpleConsumer(hostPort.host, hostPort.port, 5000, cfg.readBuffer, "squirtle-consumer") },
             { connection -> connection.close() }, {
         val poolCfg = GenericObjectPoolConfig()
         poolCfg.maxIdle = cfg.connectionsMax
@@ -89,7 +89,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
         poolCfg
     }.invoke())
     val resolveProducerMetadataPool = ConnectionsPool(producerPartitionsLeaders.values.toSet(),
-            { host -> SimpleConsumer(host, cfg.producerEntryPoint.port, 9000, 1024 * 1024 * 1, "squirtle-metadata-resolver") },
+            { hostPort -> SimpleConsumer(hostPort.host, hostPort.port, 9000, 1024 * 1024 * 1, "squirtle-metadata-resolver") },
             { connection -> connection.close() })
     val (consumerPartitionsMeta, producerPartitionsMeta) = StreamSupport.stream(listOf(
                     { getPartitionsMeta(consumersPool, consumerPartitionsLeaders, cfg.consumerEntryPoint.topic)},

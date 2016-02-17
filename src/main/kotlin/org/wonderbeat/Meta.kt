@@ -3,11 +3,11 @@ package org.wonderbeat
 import kafka.consumer.SimpleConsumer
 
 data class PartitionMeta(val topic: String, val partition: Int,
-                         val leader: String, val startOffset: Long, val endOffset: Long)
+                         val leader: HostPort, val startOffset: Long, val endOffset: Long)
 
-fun getPartitionsMeta(consumersPool: ConnectionsPool<SimpleConsumer>, leaders: Map<Int, String>, topic: String):
+fun getPartitionsMeta(consumersPool: ConnectionsPool<SimpleConsumer>, leaders: Map<Int, HostPort>, topic: String):
         List<PartitionMeta> {
-    fun <T> tryResolve(funct: (consumer: SimpleConsumer) -> T, host: String): T {
+    fun <T> tryResolve(funct: (consumer: SimpleConsumer) -> T, host: HostPort): T {
         val connectionPool = consumersPool.hostToConnection[host]!!
         val consumer = connectionPool.borrowObject()!!
         try {

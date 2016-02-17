@@ -11,11 +11,16 @@ import scala.collection.JavaConversions.*
 import scala.collection.Seq
 
 
-fun SimpleConsumer.resolveLeaders(topic: String): Map<Int, String> {
+data class HostPort(val host: String, val port: Int)
+
+fun SimpleConsumer.resolveLeaders(topic: String): Map<Int, HostPort> {
     val request = TopicMetadataRequest(kafka.api.TopicMetadataRequest.CurrentVersion(), 0, kafka.api
             .TopicMetadataRequest.DefaultClientId(), asScalaBuffer(listOf(topic)))
-    return asJavaList(asJavaList(this.send(request).topicsMetadata()).get(0).partitionsMetadata()).associateBy({it
-            .partitionId()}, {it.leader().get().host()})
+    val response = this.send(request)
+    return asJavaList(asJavaList(response.topicsMetadata())[0].partitionsMetadata()).associateBy({it
+            .partitionId()}, {
+        val leader = it.leader().get()
+        HostPort(leader.host(), leader.port())})
 }
 
 enum class Position { BEGIN, END }

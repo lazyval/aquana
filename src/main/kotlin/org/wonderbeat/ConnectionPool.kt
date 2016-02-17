@@ -8,13 +8,13 @@ import org.apache.commons.pool2.impl.GenericObjectPool
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig
 
 class PartitionConnectionPool<T>(val connections: ConnectionsPool<T>,
-                                 val partitionToHostLeader: Map<Int, String>) {
+                                 val partitionToHostLeader: Map<Int, HostPort>) {
     fun borrowConnection(partition: Int): T? = connections.hostToConnection[partitionToHostLeader[partition]!!]?.borrowObject()
     fun returnConnection(partition: Int, con: T) = connections.hostToConnection[partitionToHostLeader[partition]!!]!!.returnObject(con)
 }
 
-class ConnectionsPool<T>(hostList: Collection<String>,
-                         private val constructor: (host: String) -> T,
+class ConnectionsPool<T>(hostList: Collection<HostPort>,
+                         private val constructor: (hostPort: HostPort) -> T,
                          private val destructor: (T) -> Unit,
                          private val poolCfg: GenericObjectPoolConfig = ConnectionsPool.defaultPoolCfg()) {
 
@@ -28,7 +28,7 @@ class ConnectionsPool<T>(hostList: Collection<String>,
         }
     }
 
-    private fun internalFactory(host: String) = object: BasePooledObjectFactory<T>() {
+    private fun internalFactory(host: HostPort) = object: BasePooledObjectFactory<T>() {
         override fun create(): T = constructor(host)
         override fun destroyObject(p: PooledObject<T>) = destructor(p.`object`)
         override fun wrap(obj: T): PooledObject<T>? = DefaultPooledObject<T>(obj)
@@ -36,7 +36,7 @@ class ConnectionsPool<T>(hostList: Collection<String>,
 
     fun close() = hostToConnection.forEach { it.value.close() }
 
-    val hostToConnection: Map<String, ObjectPool<T>> = hostList.associateBy({it},
+    val hostToConnection: Map<HostPort, ObjectPool<T>> = hostList.associateBy({it},
             { a -> GenericObjectPool<T>(internalFactory(a), poolCfg)})
 
 }
