@@ -67,7 +67,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
             { hostPort ->
                 val p = Properties()
                 p.put("host", hostPort.host)
-                p.put("port", hostPort.port)
+                p.put("port", hostPort.port.toString())
                 p.put("socket.timeout.ms", 3000)
                 p.put("send.buffer.bytes", (3*1024*1024).toString() )
                 SyncProducer(SyncProducerConfig(p)) },
