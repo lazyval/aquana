@@ -35,7 +35,7 @@ data class MirrorConfig(val consumerEntryPoint: HostPortTopic,
                         val fetchSize: Int, val connectionsMax: Int,
                         val backlog: Int, val skewFactor: Int,
                         val onlyPartitions: List<Int>? = null,
-                        val startFrom: (PartitionMeta) -> Long = startFromTheEnd,
+                        val startFrom: (PartitionMeta) -> Long = startFromTheBeginning,
                         val timeoutMillis: Long = -1)
 
 

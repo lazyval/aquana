@@ -50,6 +50,7 @@ fun main(args : Array<String>) {
     opts.addOption(Option("skew", true, "[Int] Optional. Cross-partition skew factor. Specifies how many batches could one partition be " +
             "ahead of another while mirroring. 1 - if you want all partitions to be mirrored evenly. Default $defaultSkew"))
     opts.addOption(Option("partitions", true, "[List[Int]] - Optional. Partition numbers to mirror separated by ','"))
+    opts.addOption(Option("startFrom", true, "[0|62|100] - Optional. Default: 0. Offset position from the beginning (percents) mirror should start from"))
     opts.addOption(Option("help", false, "Show this message"))
     val options = parser.parse(opts, args);
     if(options.hasOption("help") || args.size == 1) {
@@ -73,7 +74,8 @@ fun main(args : Array<String>) {
             options.getOptionValue("connections", defaultConnections.toString()).toInt(),
             options.getOptionValue("backlog", defaultBacklog.toString()).toInt(),
             options.getOptionValue("skew", defaultSkew.toString()).toInt(),
-            options.getOptionValue("partitions")?.split(",")?.map { it.trim().toInt() }
+            options.getOptionValue("partitions")?.split(",")?.map { it.trim().toInt() },
+            startFrom(options.getOptionValue("startFrom", "0").toInt())
     )
     val retry = RetryerBuilder.newBuilder<Unit>().retryIfException().withStopStrategy(StopStrategies.stopAfterAttempt(10)).build()
     if(options.hasOption("genetics")) {
@@ -98,9 +100,9 @@ fun genetics(cfg: MirrorConfig) {
     )
     val engine = Engine.builder<IntegerGene, Int>(
             Function {
-                var offsetToStart = if (offsetsFile.exists()) startWithAvailableOffsets(
+                var offsetToStart = if (offsetsFile.exists()) startWithOffsets(
                         loadOffsets().checkpoints.associateBy({it.partition }, {it.offset})) else
-                    startWithRollback(30)
+                    startFrom(30)
                 val result = run(
                         MirrorConfig(cfg.consumerEntryPoint,
                                 cfg.producerEntryPoint,

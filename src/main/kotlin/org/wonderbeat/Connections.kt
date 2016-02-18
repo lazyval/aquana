@@ -23,10 +23,10 @@ fun initConsumers(pool: ConnectionsPool<SimpleConsumer>,
 }
 
 val startFromTheEnd = { meta: PartitionMeta -> meta.endOffset }
-val startFromTheBeginning = { meta: PartitionMeta -> meta.endOffset }
-fun startWithRollback(percentFromFront: Int): (PartitionMeta) -> Long =
-        { it.endOffset - ((it.endOffset - it.startOffset) / 100) * percentFromFront }
-fun startWithAvailableOffsets(offsets: Map<Int, Long>, fallback: (PartitionMeta) -> Long = startFromTheEnd): (PartitionMeta) -> Long =
+val startFromTheBeginning = { meta: PartitionMeta -> meta.startOffset }
+fun startFrom(percentFromBeginning: Int): (PartitionMeta) -> Long =
+        { it.startOffset + ((it.endOffset - it.startOffset) / 100) * percentFromBeginning }
+fun startWithOffsets(offsets: Map<Int, Long>, fallback: (PartitionMeta) -> Long = startFromTheEnd): (PartitionMeta) -> Long =
         { offsets[it.partition]?:fallback(it) }
 
 
