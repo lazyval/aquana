@@ -3,7 +3,7 @@
 
     <groupId>org.wonderbeat</groupId>
     <artifactId>squirtle</artifactId>
-    <version>4.0</version>
+    <version>4.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Squirtle Kafka Mirror</name>
@@ -203,7 +203,7 @@
     </build>
     <scm>
         <developerConnection>scm:git:git@github.com:WonderBeat/squirtle.git</developerConnection>
-      <tag>squirtle-4.0</tag>
+      <tag>HEAD</tag>
   </scm>
     <repositories>
         <repository>
