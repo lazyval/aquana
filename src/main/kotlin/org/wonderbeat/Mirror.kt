@@ -1,5 +1,6 @@
 package org.wonderbeat
 
+import com.google.common.base.Preconditions
 import kafka.consumer.SimpleConsumer
 import kafka.message.ByteBufferMessageSet
 import kafka.producer.SyncProducer
@@ -61,7 +62,11 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
             .map { it.invoke() }
             .map { if(cfg.onlyPartitions != null) { it.filterKeys { cfg.onlyPartitions.contains(it) } } else it }
             .collect(Collectors.toList<Map<Int,HostPort>>()).toList()
-    assert(consumerPartitionsLeaders.keys.size <= cfg.backlog)
+    Preconditions.checkState(consumerPartitionsLeaders.keys.size <= cfg.backlog,
+            "Backlog value [${cfg.backlog}] should be greater than partition count [${consumerPartitionsLeaders.keys.size}]")
+    Preconditions.checkState(consumerPartitionsLeaders.size == producerPartitionsLeaders.size,
+            "Can't mirror from ${consumerPartitionsLeaders.size} partitions to ${producerPartitionsLeaders.size} partitions. " +
+                    "Count mismatch")
 
     val producersPool = ConnectionsPool(producerPartitionsLeaders.values.toSet(),
             { hostPort ->
