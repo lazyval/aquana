@@ -3,7 +3,7 @@
 
     <groupId>org.wonderbeat</groupId>
     <artifactId>aquana</artifactId>
-    <version>5.0</version>
+    <version>5.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Aquana Kafka Mirror</name>
@@ -208,7 +208,7 @@
     </build>
     <scm>
         <developerConnection>scm:git:git@github.com:WonderBeat/aquana.git</developerConnection>
-      <tag>aquana-5.0</tag>
+      <tag>HEAD</tag>
   </scm>
     <repositories>
         <repository>
