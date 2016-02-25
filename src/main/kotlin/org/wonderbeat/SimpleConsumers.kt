@@ -26,8 +26,8 @@ fun SimpleConsumer.resolveLeaders(topic: String): Map<Int, HostPort> {
 enum class Position { BEGIN, END }
 
 fun SimpleConsumer.resolveOffsets(topic: String, partitions: List<Int>, position: Position): Map<Int, Long> {
-    val position = if (position == Position.BEGIN) kafka.api.OffsetRequest.EarliestTime() else kafka.api.OffsetRequest.LatestTime()
-    val request = partitions.associateBy({ TopicAndPartition(topic, it) }, { PartitionOffsetRequestInfo(position, 1) })
+    val positionMarker = if (position == Position.BEGIN) kafka.api.OffsetRequest.EarliestTime() else kafka.api.OffsetRequest.LatestTime()
+    val request = partitions.associateBy({ TopicAndPartition(topic, it) }, { PartitionOffsetRequestInfo(positionMarker, 1) })
     val response = this.getOffsetsBefore(OffsetRequest(ToScalaMap.toScalaMap(request), 0, Request.OrdinaryConsumerId()))
     if(response.hasError()) {
         throw asJavaMap(response.partitionErrorAndOffsets()).map { ErrorMapping.exceptionFor(it.value.error()) }.first()
