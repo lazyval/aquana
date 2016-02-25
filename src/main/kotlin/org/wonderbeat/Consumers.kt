@@ -23,7 +23,7 @@ class RetryingConsumer(private val delegate: MonotonicConsumer,
 class MonotonicConcurrentConsumer(val consumer: PoolAwareConsumer, var offset: AtomicLong): MonotonicConsumer {
 
     override fun fetch(): ByteBufferMessageSet {
-        var messages: ByteBufferMessageSet? = null
+        var messages: ByteBufferMessageSet?
         do {
             val ofst = offset.get()
             messages = consumer.fetch(ofst)
