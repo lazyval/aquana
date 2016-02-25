@@ -2,11 +2,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.wonderbeat</groupId>
-    <artifactId>squirtle</artifactId>
+    <artifactId>aquana</artifactId>
     <version>4.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>Squirtle Kafka Mirror</name>
+    <name>Aquana Kafka Mirror</name>
     <url>http://maven.apache.org</url>
 
     <properties>
@@ -202,7 +202,7 @@
         </plugins>
     </build>
     <scm>
-        <developerConnection>scm:git:git@github.com:WonderBeat/squirtle.git</developerConnection>
+        <developerConnection>scm:git:git@github.com:WonderBeat/aquana.git</developerConnection>
       <tag>HEAD</tag>
   </scm>
     <repositories>

@@ -5,7 +5,7 @@ import kafka.producer.SyncProducer
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicLong
 
-private val logger = LoggerFactory.getLogger("squirtle")
+private val logger = LoggerFactory.getLogger("aquana")
 
 fun initConsumers(pool: ConnectionsPool<SimpleConsumer>,
                   partitionsMeta: List<PartitionMeta>,

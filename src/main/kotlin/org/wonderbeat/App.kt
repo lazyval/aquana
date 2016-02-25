@@ -20,7 +20,7 @@ import java.io.File
 import java.time.LocalDateTime
 import java.util.function.Function
 
-private val logger = LoggerFactory.getLogger("squirtle")
+private val logger = LoggerFactory.getLogger("aquana")
 
 fun main(args : Array<String>) {
     val parser = DefaultParser();
@@ -41,7 +41,7 @@ fun main(args : Array<String>) {
     val defaultBuffer = 1024 * 1024 * 10
     opts.addOption(Option("buffer", true, "[Int] Optional. Consumer fetch size bytes. Default: $defaultBuffer" ))
     val defaultConnections = 3
-    opts.addOption(Option("connections", true, "[Int] Optional. Max connections per host. Squirtle maintains connection pool for every " +
+    opts.addOption(Option("connections", true, "[Int] Optional. Max connections per host. Aquana maintains connection pool for every " +
             "node in source/destination Kafka cluster. Default: $defaultConnections"))
     val defaultBacklog = 256
     opts.addOption(Option("backlog", true, "[Int] Optional. Thread pool backlog. Backpressure for consumer/producer stream. Default: " +
@@ -55,7 +55,7 @@ fun main(args : Array<String>) {
     val options = parser.parse(opts, args);
     if(options.hasOption("help") || args.size == 1) {
         val formatter = HelpFormatter();
-        formatter.printHelp( "squirtle", opts);
+        formatter.printHelp( "aquana", opts);
         return;
     }
     val cfg = MirrorConfig(

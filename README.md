@@ -1,17 +1,16 @@
-# squirtle
-Squirtle Kafka Mirror
+# aquana
+Aquana Kafka Mirror
 
-<img src="http://vignette2.wikia.nocookie.net/pokemon/images/3/32/007Squirtle_AG_anime.png/revision/latest?cb=20140916184312" width="250px">
+<img src="http://cdn.bulbagarden.net/upload/f/fd/134Vaporeon.png" width="250px">
 
 
 ```
-usage: squirtle
-usage: squirtle
+usage: aquana
  -backlog <arg>         [Int] Optional. Thread pool backlog. Backpressure
                         for consumer/producer stream. Default: 256
  -buffer <arg>          [Int] Optional. Consumer fetch size bytes.
                         Default: 10485760
- -connections <arg>     [Int] Optional. Max connections per host. Squirtle
+ -connections <arg>     [Int] Optional. Max connections per host. aquana
                         maintains connection pool for every node in
                         source/destination Kafka cluster. Default: 3
  -consumer <arg>        [String] Source Kafka ip address. Any node from

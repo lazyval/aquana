@@ -1,9 +1,9 @@
 <configuration scan="true" scanPeriod="10 minutes">
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>logs/squirtle.log</file>
+        <file>logs/aquana.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!-- daily rollover -->
-            <fileNamePattern>logs/squirtle.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <fileNamePattern>logs/aquana.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
             <maxHistory>2</maxHistory>
             <timeBasedFileNamingAndTriggeringPolicy
                     class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">

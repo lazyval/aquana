@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.stream.Collectors
 import java.util.stream.StreamSupport
 
-private val logger = LoggerFactory.getLogger("squirtle")
+private val logger = LoggerFactory.getLogger("aquana")
 
 data class Ticket(val reader: MonotonicConsumer, val writer: Producer, var messages: ByteBufferMessageSet = emptyBuffer) {
     override fun toString() = "{${Ticket::class.java}: r: $reader, w: $writer, msg: ${messages.size()}}"
@@ -52,12 +52,12 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
             { SimpleConsumer(cfg.consumerEntryPoint.host,
                     cfg.consumerEntryPoint.port,
                     9000, 1024 * 10,
-                    "squirtle-init")
+                    "aquana-init")
                     .resolveLeaders(cfg.consumerEntryPoint.topic) },
             { SimpleConsumer(cfg.producerEntryPoint.host,
                     cfg.producerEntryPoint.port,
                     9000, 1024 * 10,
-                    "squirtle-init").resolveLeaders(cfg.producerEntryPoint.topic) } )
+                    "aquana-init").resolveLeaders(cfg.producerEntryPoint.topic) } )
             .toCollection(ArrayList()).spliterator(), true)
             .map { it.invoke() }
             .map { if(cfg.onlyPartitions != null) { it.filterKeys { cfg.onlyPartitions.contains(it) } } else it }
@@ -85,7 +85,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
                 poolCfg
             }.invoke())
     val consumersPool = ConnectionsPool(consumerPartitionsLeaders.values.toSet(),
-            { hostPort -> SimpleConsumer(hostPort.host, hostPort.port, 5000, cfg.readBuffer, "squirtle-consumer") },
+            { hostPort -> SimpleConsumer(hostPort.host, hostPort.port, 5000, cfg.readBuffer, "aquana-consumer") },
             { connection -> connection.close() }, {
         val poolCfg = GenericObjectPoolConfig()
         poolCfg.maxIdle = cfg.connectionsMax
@@ -94,7 +94,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
         poolCfg
     }.invoke())
     val resolveProducerMetadataPool = ConnectionsPool(producerPartitionsLeaders.values.toSet(),
-            { hostPort -> SimpleConsumer(hostPort.host, hostPort.port, 9000, 1024 * 1024 * 1, "squirtle-metadata-resolver") },
+            { hostPort -> SimpleConsumer(hostPort.host, hostPort.port, 9000, 1024 * 1024 * 1, "aquana-metadata-resolver") },
             { connection -> connection.close() })
     val (consumerPartitionsMeta, producerPartitionsMeta) = StreamSupport.stream(listOf(
                     { getPartitionsMeta(consumersPool, consumerPartitionsLeaders, cfg.consumerEntryPoint.topic)},

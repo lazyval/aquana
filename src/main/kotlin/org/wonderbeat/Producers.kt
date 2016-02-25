@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConversions.asScalaMap
 import java.util.concurrent.atomic.AtomicInteger
 
-private val logger = LoggerFactory.getLogger("squirtle")
+private val logger = LoggerFactory.getLogger("aquana")
 
 
 class RetryingProducer(val producer: Producer,
