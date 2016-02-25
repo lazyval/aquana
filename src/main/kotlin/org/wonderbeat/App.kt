@@ -2,6 +2,7 @@ package org.wonderbeat
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.github.rholder.retry.RetryerBuilder
 import com.github.rholder.retry.StopStrategies
 import org.apache.commons.cli.DefaultParser
@@ -139,7 +140,7 @@ fun genetics(cfg: MirrorConfig) {
 }
 
 val offsetsFile = File("checkpoint.save")
-val mapper = ObjectMapper().registerModule(JavaTimeModule())
+val mapper = ObjectMapper().registerModule(JavaTimeModule()).registerModule(KotlinModule())
 data class PartitionCheckpoint(val partition: Int, val offset: Long)
 data class CheckPoint(val checkpoints: List<PartitionCheckpoint>, val timestamp : LocalDateTime = LocalDateTime.now())
 fun persistOffsets(checkpoint: CheckPoint) = mapper.writeValue(offsetsFile, checkpoint)
