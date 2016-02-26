@@ -12,13 +12,14 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConversions.asScalaMap
 import java.util.concurrent.atomic.AtomicInteger
 
-private val logger = LoggerFactory.getLogger("aquana")
+private val logger = LoggerFactory.getLogger("org.wonderbeat.producers")
 
 
 class RetryingProducer(val producer: Producer,
                        val retryer: Retryer<ProducerResponse> =
                        RetryerBuilder.newBuilder<ProducerResponse>()
                                .retryIfException()
+                               .withRetryListener(logAttemptFailure)
                                .withStopStrategy(StopStrategies.stopAfterAttempt(5))
                                .build()): Producer by producer {
     override fun write(messages: ByteBufferMessageSet): ProducerResponse =

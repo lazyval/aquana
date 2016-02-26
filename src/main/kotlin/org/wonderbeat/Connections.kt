@@ -5,7 +5,7 @@ import kafka.producer.SyncProducer
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicLong
 
-private val logger = LoggerFactory.getLogger("aquana")
+private val logger = LoggerFactory.getLogger("org.wonderbeat.connections")
 
 fun initConsumers(pool: ConnectionsPool<SimpleConsumer>,
                   partitionsMeta: List<PartitionMeta>,

@@ -21,7 +21,7 @@ import java.io.File
 import java.time.LocalDateTime
 import java.util.function.Function
 
-private val logger = LoggerFactory.getLogger("aquana")
+private val logger = LoggerFactory.getLogger("org.wonderbeat.aquana")
 
 fun main(args : Array<String>) {
     val parser = DefaultParser();
@@ -39,8 +39,8 @@ fun main(args : Array<String>) {
     opts.addOption(Option("outputPool", true, "[Int] Optional. Producer thread pool size. Default: $defaultPoolSize" ))
     val defaultTcpBuffer = 1024 * 1024 * 2
     opts.addOption(Option("tcpBuffer", true, "[Int] Optional Tcp socket buffer. Default $defaultTcpBuffer bytes" ))
-    val defaultBuffer = 1024 * 1024 * 10
-    opts.addOption(Option("buffer", true, "[Int] Optional. Consumer fetch size bytes. Default: $defaultBuffer" ))
+    val batchSize = 1024 * 1024 * 10
+    opts.addOption(Option("batchSize", true, "[Int] Optional. Consumer fetch size bytes. Default: $batchSize" ))
     val defaultConnections = 3
     opts.addOption(Option("connections", true, "[Int] Optional. Max connections per host. Aquana maintains connection pool for every " +
             "node in source/destination Kafka cluster. Default: $defaultConnections"))
@@ -71,14 +71,15 @@ fun main(args : Array<String>) {
             options.getOptionValue("tcpBuffer", defaultTcpBuffer.toString()).toInt(),
             options.getOptionValue("inputPool", defaultPoolSize.toString()).toInt(),
             options.getOptionValue("outputPool", defaultPoolSize.toString()).toInt(),
-            options.getOptionValue("buffer", defaultBuffer.toString()).toInt(),
+            options.getOptionValue("batchSize", batchSize.toString()).toInt(),
             options.getOptionValue("connections", defaultConnections.toString()).toInt(),
             options.getOptionValue("backlog", defaultBacklog.toString()).toInt(),
             options.getOptionValue("skew", defaultSkew.toString()).toInt(),
             options.getOptionValue("partitions")?.split(",")?.map { it.trim().toInt() },
             startFrom(options.getOptionValue("startFrom", "0").toInt())
     )
-    val retry = RetryerBuilder.newBuilder<Unit>().retryIfException().withStopStrategy(StopStrategies.stopAfterAttempt(10)).build()
+    val retry = RetryerBuilder.newBuilder<Unit>().retryIfException().withRetryListener(logAttemptFailure).withStopStrategy(StopStrategies
+            .stopAfterAttempt(10)).build()
     if(options.hasOption("genetics")) {
         logger.info("Genetic test started")
         retry.call { genetics(cfg) }

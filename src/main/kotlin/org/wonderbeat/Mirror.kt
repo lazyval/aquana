@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.stream.Collectors
 import java.util.stream.StreamSupport
 
-private val logger = LoggerFactory.getLogger("aquana")
+private val logger = LoggerFactory.getLogger("org.wonderbeat.mirror")
 
 data class Ticket(val reader: MonotonicConsumer, val writer: Producer, var messages: ByteBufferMessageSet = emptyBuffer) {
     override fun toString() = "{${Ticket::class.java}: r: $reader, w: $writer, msg: ${messages.size()}}"
