@@ -8,7 +8,7 @@ Aquana Kafka Mirror
 usage: aquana
  -backlog <arg>         [Int] Optional. Thread pool backlog. Backpressure
                         for consumer/producer stream. Default: 256
- -buffer <arg>          [Int] Optional. Consumer fetch size bytes.
+ -batchSize <arg>          [Int] Optional. Consumer fetch size bytes.
                         Default: 10485760
  -connections <arg>     [Int] Optional. Max connections per host. aquana
                         maintains connection pool for every node in
