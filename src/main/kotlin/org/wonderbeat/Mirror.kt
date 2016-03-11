@@ -35,6 +35,7 @@ data class MirrorConfig(val consumerEntryPoint: HostPortTopic,
                         val readBuffer: Int, val threadCountIn: Int, val threadCountOut: Int,
                         val fetchSize: Int, val connectionsMax: Int,
                         val backlog: Int, val skewFactor: Int,
+                        val socketTimeoutMills: Int = 9000,
                         val onlyPartitions: List<Int>? = null,
                         val startFrom: (PartitionMeta) -> Long = startFromTheBeginning,
                         val timeoutMillis: Long = -1)
@@ -51,12 +52,12 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     val (consumerPartitionsLeaders, producerPartitionsLeaders) = StreamSupport.stream(listOf(
             { SimpleConsumer(cfg.consumerEntryPoint.host,
                     cfg.consumerEntryPoint.port,
-                    9000, 1024 * 10,
+                    cfg.socketTimeoutMills, 1024 * 10,
                     "aquana-init")
                     .resolveLeaders(cfg.consumerEntryPoint.topic) },
             { SimpleConsumer(cfg.producerEntryPoint.host,
                     cfg.producerEntryPoint.port,
-                    9000, 1024 * 10,
+                    cfg.socketTimeoutMills, 1024 * 10,
                     "aquana-init").resolveLeaders(cfg.producerEntryPoint.topic) } )
             .toCollection(ArrayList()).spliterator(), true)
             .map { it.invoke() }
@@ -73,7 +74,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
                 val p = Properties()
                 p.put("host", hostPort.host)
                 p.put("port", hostPort.port.toString())
-                p.put("socket.timeout.ms", 3000)
+                p.put("socket.timeout.ms", cfg.socketTimeoutMills)
                 p.put("send.buffer.bytes", (3*1024*1024).toString() )
                 SyncProducer(SyncProducerConfig(p)) },
             { connection -> connection.close() },
@@ -85,7 +86,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
                 poolCfg
             }.invoke())
     val consumersPool = ConnectionsPool(consumerPartitionsLeaders.values.toSet(),
-            { hostPort -> SimpleConsumer(hostPort.host, hostPort.port, 5000, cfg.readBuffer, "aquana-consumer") },
+            { hostPort -> SimpleConsumer(hostPort.host, hostPort.port, cfg.socketTimeoutMills, cfg.readBuffer, "aquana-consumer") },
             { connection -> connection.close() }, {
         val poolCfg = GenericObjectPoolConfig()
         poolCfg.maxIdle = cfg.connectionsMax
@@ -94,7 +95,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
         poolCfg
     }.invoke())
     val resolveProducerMetadataPool = ConnectionsPool(producerPartitionsLeaders.values.toSet(),
-            { hostPort -> SimpleConsumer(hostPort.host, hostPort.port, 9000, 1024 * 1024 * 1, "aquana-metadata-resolver") },
+            { hostPort -> SimpleConsumer(hostPort.host, hostPort.port, cfg.socketTimeoutMills, 1024 * 1024 * 1, "aquana-metadata-resolver") },
             { connection -> connection.close() })
     val (consumerPartitionsMeta, producerPartitionsMeta) = StreamSupport.stream(listOf(
                     { getPartitionsMeta(consumersPool, consumerPartitionsLeaders, cfg.consumerEntryPoint.topic)},
