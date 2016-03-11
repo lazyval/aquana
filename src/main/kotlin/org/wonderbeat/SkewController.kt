@@ -7,11 +7,11 @@ import java.util.concurrent.atomic.AtomicLong
 /**
  * Kinda Monotonic checker
  */
-class SkewController(val maxSkew: Int, val bucketsIds: List<Int>) {
+class SkewController(val maxSkew: Int, val bucketsIds: List<Int>, val limitLoggingPermitsPerSecond: Double = 0.05) {
 
     private val logger = LoggerFactory.getLogger(SkewController::class.java)
 
-    private val rateLimiter = RateLimiter.create(0.05)
+    private val rateLimiter = RateLimiter.create(limitLoggingPermitsPerSecond)
 
     private val buckets = (1..bucketsIds.size).map { AtomicLong(0) }
 
@@ -33,6 +33,7 @@ class SkewController(val maxSkew: Int, val bucketsIds: List<Int>) {
     }
 
     private data class SkewState(val isSkewed: Boolean, val bucketState: List<Long>, val min: Long, val max: Long)
+
     private fun isSkewedWithState(): SkewState {
         val state = buckets.map { it.get() }
         val minMax = state.fold(Pair(state.first(), state.first()), { acc, item ->
@@ -40,17 +41,11 @@ class SkewController(val maxSkew: Int, val bucketsIds: List<Int>) {
         })
         val skew = minMax.second - minMax.first > maxSkew
         if(skew && logger.isDebugEnabled && rateLimiter.tryAcquire()) {
-            logSkewState(minMax.first)
+            val slowestPartitionNum = bucketsIds[state.indexOf(minMax.first)]
+            val fastestPartitionNum = bucketsIds[state.indexOf(minMax.second)]
+            logger.debug("Skew detected. $slowestPartitionNum slower than $fastestPartitionNum ")
         }
         return SkewState(skew, state, minMax.first, minMax.second)
     }
 
-    private fun logSkewState(minBucketVal: Long) {
-        val statStrings = printVertically(buckets.mapIndexed { i, value ->
-            val skewSize = (value.get() - minBucketVal).toInt()
-            val normalized = if(skewSize == 0) 0 else (((maxSkew.toDouble() + 1) / skewSize ) * 10).toInt()
-            "${bucketsIds[i]}".padEnd(3, ' ').padEnd(normalized, 'x')
-        }, 100)
-        logger.debug("Skew detected\n$statStrings")
-    }
 }
