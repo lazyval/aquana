@@ -42,7 +42,7 @@ class PoolAwareProducer(val topic: String,
         try {
             return connection.send(request)
         } catch(ex: Exception) {
-            logger.error("${this} failed to write to ${connection.config().host()}")
+            logger.error("${this} failed to write to ${connection.config().host()}:${connection.config().port()}")
             throw ex
         } finally {
             producerPool.returnConnection(partition, connection)
