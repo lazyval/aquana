@@ -62,24 +62,24 @@ fun main(args : Array<String>) {
         return;
     }
     val cfg = MirrorConfig(
-            HostPortTopic(options.getOptionValue("consumer"),
+            consumerEntryPoint = HostPortTopic(options.getOptionValue("consumer"),
                     options.getOptionValue("consumerPort", defaultPort.toString()).toInt(),
                     options.getOptionValue("consumerTopic")
             ),
-            HostPortTopic(options.getOptionValue("producer"),
+            producerEntryPoint = HostPortTopic(options.getOptionValue("producer"),
                     options.getOptionValue("producerPort", defaultPort.toString()).toInt(),
                     options.getOptionValue("producerTopic")
             ),
-            options.getOptionValue("tcpBuffer", defaultTcpBuffer.toString()).toInt(),
-            options.getOptionValue("inputPool", defaultPoolSize.toString()).toInt(),
-            options.getOptionValue("outputPool", defaultPoolSize.toString()).toInt(),
-            options.getOptionValue("batchSize", batchSize.toString()).toInt(),
-            options.getOptionValue("connections", defaultConnections.toString()).toInt(),
-            options.getOptionValue("backlog", defaultBacklog.toString()).toInt(),
-            options.getOptionValue("socketTimeout", defaultSocketTimeout.toString()).toInt(),
-            options.getOptionValue("skew", defaultSkew.toString()).toInt(),
-            options.getOptionValue("partitions")?.split(",")?.map { it.trim().toInt() },
-            startFrom(options.getOptionValue("startFrom", "0").toInt())
+            readBuffer = options.getOptionValue("tcpBuffer", defaultTcpBuffer.toString()).toInt(),
+            threadCountIn = options.getOptionValue("inputPool", defaultPoolSize.toString()).toInt(),
+            threadCountOut = options.getOptionValue("outputPool", defaultPoolSize.toString()).toInt(),
+            fetchSize = options.getOptionValue("batchSize", batchSize.toString()).toInt(),
+            connectionsMax = options.getOptionValue("connections", defaultConnections.toString()).toInt(),
+            backlog = options.getOptionValue("backlog", defaultBacklog.toString()).toInt(),
+            socketTimeoutMills = options.getOptionValue("socketTimeout", defaultSocketTimeout.toString()).toInt(),
+            skewFactor = options.getOptionValue("skew", defaultSkew.toString()).toInt(),
+            onlyPartitions = options.getOptionValue("partitions")?.split(",")?.map { it.trim().toInt() },
+            startFrom = startFrom(options.getOptionValue("startFrom", "0").toInt())
     )
     val retry = RetryerBuilder.newBuilder<Unit>().retryIfException().withRetryListener(logAttemptFailure).withStopStrategy(StopStrategies
             .stopAfterAttempt(10)).build()
