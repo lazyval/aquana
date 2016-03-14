@@ -109,15 +109,15 @@ fun genetics(cfg: MirrorConfig) {
                         loadOffsets().checkpoints.associateBy({it.partition }, {it.offset})) else
                     startFrom(30)
                 val result = run(
-                        MirrorConfig(cfg.consumerEntryPoint,
-                                cfg.producerEntryPoint,
-                                it.get(0, 0).allele,
-                                it.get(1, 0).allele,
-                                it.get(2, 0).allele,
-                                it.get(3, 0).allele,
-                                it.get(4, 0).allele,
-                                Math.pow(2.toDouble(), it.get(5, 0).allele.toDouble()).toInt(),
-                                it.get(5,0).allele,
+                        MirrorConfig(consumerEntryPoint = cfg.consumerEntryPoint,
+                                producerEntryPoint = cfg.producerEntryPoint,
+                                readBuffer = it.get(0, 0).allele,
+                                threadCountIn = it.get(1, 0).allele,
+                                threadCountOut = it.get(2, 0).allele,
+                                fetchSize = it.get(3, 0).allele,
+                                connectionsMax = it.get(4, 0).allele,
+                                backlog = Math.pow(2.toDouble(), it.get(5, 0).allele.toDouble()).toInt(),
+                                skewFactor = it.get(5,0).allele,
                                 startFrom = offsetToStart,
                                 timeoutMillis = 60000))
                 persistOffsets(CheckPoint(result.consumerPartitionStat.toList().map { PartitionCheckpoint(it.first, it.second.endOffset) }))
