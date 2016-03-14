@@ -49,6 +49,8 @@ fun main(args : Array<String>) {
             "$defaultBacklog"))
     val defaultSocketTimeout = 9000
     opts.addOption(Option("socketTimeout", true, "[Int] Optional. Socket timeout milliseconds. Default $defaultSocketTimeout"))
+    val defaultRequestTimeout = 10000
+    opts.addOption(Option("requestTimeout", true, "[Int] Optional. The ack timeout of the producer requests. Value must be non-negative and non-zero. Default $defaultRequestTimeout"))
     val defaultSkew = 2
     opts.addOption(Option("skew", true, "[Int] Optional. Cross-partition skew factor. Specifies how many batches could one partition be " +
             "ahead of another while mirroring. 1 - if you want all partitions to be mirrored evenly. Default $defaultSkew"))
@@ -77,6 +79,7 @@ fun main(args : Array<String>) {
             connectionsMax = options.getOptionValue("connections", defaultConnections.toString()).toInt(),
             backlog = options.getOptionValue("backlog", defaultBacklog.toString()).toInt(),
             socketTimeoutMills = options.getOptionValue("socketTimeout", defaultSocketTimeout.toString()).toInt(),
+            requestTimeout = options.getOptionValue("requestTimeout", defaultRequestTimeout.toString()).toInt(),
             skewFactor = options.getOptionValue("skew", defaultSkew.toString()).toInt(),
             onlyPartitions = options.getOptionValue("partitions")?.split(",")?.map { it.trim().toInt() },
             startFrom = startFrom(options.getOptionValue("startFrom", "0").toInt())

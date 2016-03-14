@@ -36,6 +36,7 @@ data class MirrorConfig(val consumerEntryPoint: HostPortTopic,
                         val fetchSize: Int, val connectionsMax: Int,
                         val backlog: Int, val skewFactor: Int,
                         val socketTimeoutMills: Int = 9000,
+                        val requestTimeout: Int = 10000,
                         val onlyPartitions: List<Int>? = null,
                         val startFrom: (PartitionMeta) -> Long = startFromTheBeginning,
                         val timeoutMillis: Long = -1)
@@ -75,6 +76,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
                 p.put("host", hostPort.host)
                 p.put("port", hostPort.port.toString())
                 p.put("socket.timeout.ms", cfg.socketTimeoutMills)
+                p.put("request.timeout.ms", cfg.requestTimeout)
                 p.put("send.buffer.bytes", (3*1024*1024).toString() )
                 SyncProducer(SyncProducerConfig(p)) },
             { connection -> connection.close() },
