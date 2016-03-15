@@ -56,7 +56,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
                 val consumer = SimpleConsumer(cfg.consumerEntryPoint.host,
                         cfg.consumerEntryPoint.port,
                         cfg.socketTimeoutMills, BlockingChannel.UseDefaultBufferSize(),
-                        "aquana-init")
+                        "aquana-metadata-resolver")
                 val leaders = consumer.resolveLeaders(cfg.consumerEntryPoint.topic)
                 consumer.close()
                 leaders
@@ -65,7 +65,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
                 val consumer = SimpleConsumer(cfg.producerEntryPoint.host,
                         cfg.producerEntryPoint.port,
                         cfg.socketTimeoutMills, BlockingChannel.UseDefaultBufferSize(),
-                        "aquana-init")
+                        "aquana-metadata-resolver")
                 val leaders = consumer.resolveLeaders(cfg.producerEntryPoint.topic)
                 consumer.close()
                 leaders
@@ -92,9 +92,9 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
             { connection -> connection.close() },
             {
                 val poolCfg = GenericObjectPoolConfig()
-                poolCfg.maxIdle = 15
-                poolCfg.maxTotal = 15
-                poolCfg.minIdle = 4
+                poolCfg.maxIdle = cfg.connectionsMax
+                poolCfg.maxTotal = cfg.connectionsMax
+                poolCfg.minIdle = cfg.connectionsMax / 2
                 poolCfg
             }.invoke())
     val consumersPool = ConnectionsPool(consumerPartitionsLeaders.values.toSet(),
@@ -107,7 +107,8 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
         poolCfg
     }.invoke())
     val resolveProducerMetadataPool = ConnectionsPool(producerPartitionsLeaders.values.toSet(),
-            { hostPort -> SimpleConsumer(hostPort.host, hostPort.port, cfg.socketTimeoutMills, 1024 * 1024 * 1, "aquana-metadata-resolver") },
+            { hostPort -> SimpleConsumer(hostPort.host,
+                    hostPort.port, cfg.socketTimeoutMills, BlockingChannel.UseDefaultBufferSize(), "aquana-metadata-resolver") },
             { connection -> connection.close() })
     val (consumerPartitionsMeta, producerPartitionsMeta) = StreamSupport.stream(listOf(
                     { getPartitionsMeta(consumersPool, consumerPartitionsLeaders, cfg.consumerEntryPoint.topic)},
