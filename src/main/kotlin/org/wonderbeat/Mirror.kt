@@ -51,15 +51,24 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     environment.setDispatcher("in-io-dispatcher", ThreadPoolExecutorDispatcher(cfg.threadCountIn, cfg.backlog, "io-input-pool"))
     environment.setDispatcher("out-io-dispatcher", ThreadPoolExecutorDispatcher(cfg.threadCountOut, cfg.backlog, "io-output-pool"))
     val (consumerPartitionsLeaders, producerPartitionsLeaders) = StreamSupport.stream(listOf(
-            { SimpleConsumer(cfg.consumerEntryPoint.host,
-                    cfg.consumerEntryPoint.port,
-                    cfg.socketTimeoutMills, 1024 * 10,
-                    "aquana-init")
-                    .resolveLeaders(cfg.consumerEntryPoint.topic) },
-            { SimpleConsumer(cfg.producerEntryPoint.host,
-                    cfg.producerEntryPoint.port,
-                    cfg.socketTimeoutMills, 1024 * 10,
-                    "aquana-init").resolveLeaders(cfg.producerEntryPoint.topic) } )
+            {
+                val consumer = SimpleConsumer(cfg.consumerEntryPoint.host,
+                        cfg.consumerEntryPoint.port,
+                        cfg.socketTimeoutMills, 1024 * 10,
+                        "aquana-init")
+                val leaders = consumer.resolveLeaders(cfg.consumerEntryPoint.topic)
+                consumer.close()
+                leaders
+            },
+            {
+                val consumer = SimpleConsumer(cfg.producerEntryPoint.host,
+                        cfg.producerEntryPoint.port,
+                        cfg.socketTimeoutMills, 1024 * 10,
+                        "aquana-init")
+                val leaders = consumer.resolveLeaders(cfg.producerEntryPoint.topic)
+                consumer.close()
+                leaders
+            } )
             .toCollection(ArrayList()).spliterator(), true)
             .map { it.invoke() }
             .map { if(cfg.onlyPartitions != null) { it.filterKeys { cfg.onlyPartitions.contains(it) } } else it }
