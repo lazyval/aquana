@@ -3,6 +3,7 @@ package org.wonderbeat
 import com.google.common.base.Preconditions
 import kafka.consumer.SimpleConsumer
 import kafka.message.ByteBufferMessageSet
+import kafka.network.BlockingChannel
 import kafka.producer.SyncProducer
 import kafka.producer.SyncProducerConfig
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig
@@ -54,7 +55,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
             {
                 val consumer = SimpleConsumer(cfg.consumerEntryPoint.host,
                         cfg.consumerEntryPoint.port,
-                        cfg.socketTimeoutMills, 1024 * 10,
+                        cfg.socketTimeoutMills, BlockingChannel.UseDefaultBufferSize(),
                         "aquana-init")
                 val leaders = consumer.resolveLeaders(cfg.consumerEntryPoint.topic)
                 consumer.close()
@@ -63,7 +64,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
             {
                 val consumer = SimpleConsumer(cfg.producerEntryPoint.host,
                         cfg.producerEntryPoint.port,
-                        cfg.socketTimeoutMills, 1024 * 10,
+                        cfg.socketTimeoutMills, BlockingChannel.UseDefaultBufferSize(),
                         "aquana-init")
                 val leaders = consumer.resolveLeaders(cfg.producerEntryPoint.topic)
                 consumer.close()
