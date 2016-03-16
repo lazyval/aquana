@@ -14,7 +14,9 @@ class SkewController(val maxSkew: Int, val bucketsIds: List<Int>,
 
     private val buckets = (1..bucketsIds.size).map { AtomicLong(0) }
 
-    fun tryAdvance(bucketId: Int): Boolean {
+    fun tryAdvance(bucketId: Int) = tryAdvance(bucketId, 1)
+
+    fun tryAdvance(bucketId: Int, size: Long): Boolean {
         val bucketPosition = bucketsIds.indexOf(bucketId)
         val bucket = buckets[bucketPosition]
         do {
@@ -23,7 +25,7 @@ class SkewController(val maxSkew: Int, val bucketsIds: List<Int>,
             if(skewState.isSkewed && bucketVal == skewState.max) {
                 return false
             }
-        } while(skewState.bucketState[bucketPosition] != bucketVal || !bucket.compareAndSet(bucketVal, bucketVal + 1))
+        } while(skewState.bucketState[bucketPosition] != bucketVal || !bucket.compareAndSet(bucketVal, bucketVal + size))
         return true
     }
 
