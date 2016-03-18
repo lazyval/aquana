@@ -155,7 +155,6 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <minimizeJar>true</minimizeJar>
                             <artifactSet>
                                 <excludes>
                                     <exclude>classworlds:classworlds</exclude>
