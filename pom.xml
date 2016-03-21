@@ -204,6 +204,19 @@
                 <artifactId>versions-maven-plugin</artifactId>
                 <version>2.2</version>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.10.3</version>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>2.5.2</version>
+            </plugin>
         </plugins>
     </build>
     <scm>
@@ -221,5 +234,17 @@
             <url>http://repository.jetbrains.com/all</url>
         </repository>
     </repositories>
+    <distributionManagement>
+        <repository>
+            <id>niagara-releases</id>
+            <name>Niagara Releases</name>
+            <url>http://52.7.233.170:8081/nexus/content/repositories/releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>niagara-snapshots</id>
+            <name>Niagara Snapshots</name>
+            <url>http://52.7.233.170:8081/nexus/content/repositories/snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
 
 </project>
