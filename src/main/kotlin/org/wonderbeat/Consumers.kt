@@ -51,10 +51,15 @@ interface MonotonicConsumer {
 class PoolAwareConsumer(val topic: String,
                         val partition: Int,
                         val consumersPool: PartitionConnectionPool<SimpleConsumer>,
-                        val fetchSize: Int = 1024 * 1024 * 7) {
+                        val fetchSize: Int = 1024 * 1024 * 7,
+                        val maxWaitMs: Int = 2000,
+                        val minBytes: Int = fetchSize / 2) {
 
     fun fetch(offset: Long): ByteBufferMessageSet? {
-        val request = FetchRequestBuilder().addFetch(topic, partition, offset, fetchSize).build()
+        val request = FetchRequestBuilder().addFetch(topic, partition, offset, fetchSize)
+                .maxWait(maxWaitMs)
+                .minBytes(minBytes)
+                .build()
         val connection = consumersPool.borrowConnection(partition)!!
         try {
             val response = connection.fetch(request)
