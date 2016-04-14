@@ -56,12 +56,24 @@ fun main(args : Array<String>) {
             "ahead of another while mirroring. 1 - if you want all partitions to be mirrored evenly. Default $defaultSkew"))
     opts.addOption(Option("partitions", true, "[List[Int]] - Optional. Partition numbers to mirror separated by ','"))
     opts.addOption(Option("startFrom", true, "[0|62|100] - Optional. Default: 0. Offset position from the beginning (percents) mirror should start from"))
+    opts.addOption(Option("startFromDetailed", true, "[partition:offset, ...] - Optional. Offset position for each partition to start from"))
     opts.addOption(Option("help", false, "Show this message"))
     val options = parser.parse(opts, args);
     if(options.hasOption("help") || args.size == 1) {
         val formatter = HelpFormatter();
         formatter.printHelp( "aquana", opts);
         return;
+    }
+    val startFrom = when {
+        options.hasOption("startFrom") -> startFrom(options.getOptionValue("startFrom").toInt())
+        options.hasOption("startFromDetailed") -> {
+            val option = options.getOptionValue("startFromDetailed").toString()
+                    .split(' ')
+                    .map { it.split(':') }
+                    .associateTo(mutableMapOf<Int, Long>(), { Pair(it[0].toInt(), it[1].toLong()) })
+            startWithOffsets(option)
+        }
+        else -> startFrom(0)
     }
     val cfg = MirrorConfig(
             consumerEntryPoint = HostPortTopic(options.getOptionValue("consumer"),
@@ -82,7 +94,7 @@ fun main(args : Array<String>) {
             requestTimeout = options.getOptionValue("requestTimeout", defaultRequestTimeout.toString()).toInt(),
             skewFactor = options.getOptionValue("skew", defaultSkew.toString()).toInt(),
             onlyPartitions = options.getOptionValue("partitions")?.split(",")?.map { it.trim().toInt() },
-            startFrom = startFrom(options.getOptionValue("startFrom", "0").toInt())
+            startFrom = startFrom
     )
     val retry = RetryerBuilder.newBuilder<Unit>().retryIfException().withRetryListener(logAttemptFailure).withStopStrategy(StopStrategies
             .stopAfterAttempt(10)).build()
