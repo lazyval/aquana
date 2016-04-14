@@ -55,7 +55,7 @@ fun main(args : Array<String>) {
     opts.addOption(Option("skew", true, "[Int] Optional. Cross-partition skew factor. Specifies how many batches could one partition be " +
             "ahead of another while mirroring. 1 - if you want all partitions to be mirrored evenly. Default $defaultSkew"))
     opts.addOption(Option("partitions", true, "[List[Int]] - Optional. Partition numbers to mirror separated by ','"))
-    opts.addOption(Option("startFrom", true, "[0|62|100] - Optional. Default: 0. Offset position from the beginning (percents) mirror should start from"))
+    opts.addOption(Option("startFrom", true, "[0|62|100] - Optional. Default: 0. Offset position from the beginning (percents) mirror should start from. Overrides startFromDetailed"))
     opts.addOption(Option("startFromDetailed", true, "[partition:offset, ...] - Optional. Offset position for each partition to start from"))
     opts.addOption(Option("help", false, "Show this message"))
     val options = parser.parse(opts, args);
