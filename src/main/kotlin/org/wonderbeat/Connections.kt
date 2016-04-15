@@ -26,7 +26,11 @@ val startFromTheEnd = { meta: PartitionMeta -> meta.endOffset }
 val startFromTheBeginning = { meta: PartitionMeta -> meta.startOffset }
 fun startFrom(percentFromBeginning: Int): (PartitionMeta) -> Long =
         { it.startOffset + ((it.endOffset - it.startOffset) / 100) * percentFromBeginning }
-fun startWithOffsets(offsets: Map<Int, Long>, fallback: (PartitionMeta) -> Long = startFromTheEnd): (PartitionMeta) -> Long =
+
+class NoOffsetToStartForPartition(msg: String?): RuntimeException(msg)
+fun startWithOffsets(offsets: Map<Int, Long>,
+                     fallback: (PartitionMeta) -> Long =
+                     { throw NoOffsetToStartForPartition("No offset to start for $it")  }): (PartitionMeta) -> Long =
         { offsets[it.partition]?:fallback(it) }
 
 

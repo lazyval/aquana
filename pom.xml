@@ -3,7 +3,7 @@
 
     <groupId>org.wonderbeat</groupId>
     <artifactId>aquana</artifactId>
-    <version>8.1-SNAPSHOT</version>
+    <version>9.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Aquana Kafka Mirror</name>
