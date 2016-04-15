@@ -233,12 +233,12 @@
         <repository>
             <id>niagara-releases</id>
             <name>Niagara Releases</name>
-            <url>http://52.7.233.170:8081/nexus/content/repositories/releases/</url>
+            <url>http://nexus.aws.niagara.303net.pvt:8081/nexus/content/repositories/releases/</url>
         </repository>
         <snapshotRepository>
             <id>niagara-snapshots</id>
             <name>Niagara Snapshots</name>
-            <url>http://52.7.233.170:8081/nexus/content/repositories/snapshots</url>
+            <url>http://nexus.aws.niagara.303net.pvt:8081/nexus/content/repositories/snapshots</url>
         </snapshotRepository>
     </distributionManagement>
 
