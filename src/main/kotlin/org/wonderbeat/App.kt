@@ -3,8 +3,6 @@ package org.wonderbeat
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.github.rholder.retry.RetryerBuilder
-import com.github.rholder.retry.StopStrategies
 import org.apache.commons.cli.DefaultParser
 import org.apache.commons.cli.HelpFormatter
 import org.apache.commons.cli.Option
@@ -96,16 +94,12 @@ fun main(args : Array<String>) {
             onlyPartitions = options.getOptionValue("partitions")?.split(",")?.map { it.trim().toInt() },
             startFrom = startFrom
     )
-    val retry = RetryerBuilder.newBuilder<Unit>().retryIfException().withRetryListener(logAttemptFailure).withStopStrategy(StopStrategies
-            .stopAfterAttempt(10)).build()
     if(options.hasOption("genetics")) {
         logger.info("Genetic test started")
-        retry.call { genetics(cfg) }
+        genetics(cfg)
         return
     }
-    retry.call {
-        run(cfg)
-    }
+    run(cfg)
 }
 
 fun genetics(cfg: MirrorConfig) {
