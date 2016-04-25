@@ -1,11 +1,14 @@
 package org.wonderbeat
 
+import kafka.producer.SyncProducer
+import kafka.producer.SyncProducerConfig
 import org.apache.commons.pool2.BasePooledObjectFactory
 import org.apache.commons.pool2.ObjectPool
 import org.apache.commons.pool2.PooledObject
 import org.apache.commons.pool2.impl.DefaultPooledObject
 import org.apache.commons.pool2.impl.GenericObjectPool
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig
+import java.util.*
 
 class PartitionConnectionPool<T>(val connections: ConnectionsPool<T>,
                                  val partitionToHostLeader: Map<Int, HostPort>) {
@@ -19,7 +22,23 @@ class ConnectionsPool<T>(hostList: Collection<HostPort>,
                          private val poolCfg: GenericObjectPoolConfig = ConnectionsPool.defaultPoolCfg()) {
 
     companion object {
-        public fun defaultPoolCfg(): GenericObjectPoolConfig {
+
+        /**
+         * Wrapper around dirty Kafka API
+         */
+        fun syncProducer(hostPort: HostPort, socketTimeoutMills: Int, requestTimeout: Int,
+                         sendBufferBytes: Int = 3*1024*1024, clientId: String = "aquana-producer"): SyncProducer {
+            val p = Properties()
+            p.put("host", hostPort.host)
+            p.put("port", hostPort.port.toString())
+            p.put("socket.timeout.ms", socketTimeoutMills)
+            p.put("request.timeout.ms", requestTimeout.toString())
+            p.put("send.buffer.bytes", sendBufferBytes.toString() )
+            p.put("client.id",  clientId)
+            return SyncProducer(SyncProducerConfig(p))
+        }
+
+        fun defaultPoolCfg(): GenericObjectPoolConfig {
             val poolCfg = GenericObjectPoolConfig()
             poolCfg.maxIdle = 5
             poolCfg.maxTotal = 6
