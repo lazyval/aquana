@@ -10,7 +10,6 @@ import reactor.Environment
 import reactor.bus.Event
 import reactor.bus.EventBus
 import reactor.bus.selector.Selectors
-import reactor.core.config.PropertiesConfigurationReader
 import reactor.core.dispatch.ThreadPoolExecutorDispatcher
 import reactor.rx.Promise
 import java.nio.ByteBuffer
@@ -58,7 +57,7 @@ fun <T> Stream<T>.collectToList(): List<T> = this.collect(Collectors.toList<T>()
 
 fun run(cfg: MirrorConfig): MirrorStatistics {
     logger.debug("About to start: $cfg")
-    val environment = Environment(mapOf(Pair(Environment.THREAD_POOL, ThreadPoolExecutorDispatcher(4, 4, "work-pool"))), PropertiesConfigurationReader())
+    val environment = Environment()
     environment.setDispatcher("in-io-dispatcher", ThreadPoolExecutorDispatcher(cfg.threadCountIn, cfg.backlog, "io-input-pool"))
     environment.setDispatcher("out-io-dispatcher", ThreadPoolExecutorDispatcher(cfg.threadCountOut, cfg.backlog, "io-output-pool"))
     val (consumerPartitionsLeaders, producerPartitionsLeaders) = invokeConcurrently(
