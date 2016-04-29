@@ -4,7 +4,6 @@ import com.google.common.base.Preconditions
 import kafka.consumer.SimpleConsumer
 import kafka.message.ByteBufferMessageSet
 import kafka.network.BlockingChannel
-import org.apache.commons.pool2.impl.GenericObjectPoolConfig
 import org.slf4j.LoggerFactory
 import reactor.Environment
 import reactor.bus.Event
@@ -74,26 +73,13 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     val producersPool = ConnectionsPool(producerPartitionsLeaders.values.toSet(),
             { hostPort -> ConnectionsPool.syncProducer(hostPort, cfg.socketTimeoutMills, cfg.requestTimeout)},
             { connection -> connection.close() },
-            {
-                val poolCfg = GenericObjectPoolConfig()
-                poolCfg.maxIdle = cfg.connectionsMax
-                poolCfg.maxTotal = cfg.connectionsMax
-                poolCfg.minIdle = cfg.connectionsMax / 2
-                poolCfg
-            }.invoke())
+            ConnectionsPool.genericPool(cfg.connectionsMax))
     val consumersPool = ConnectionsPool(consumerPartitionsLeaders.values.toSet(),
             { hostPort -> SimpleConsumer(hostPort.host, hostPort.port, cfg.socketTimeoutMills, cfg.readBuffer, "aquana-consumer") },
             { connection -> connection.close() },
-            {
-                val poolCfg = GenericObjectPoolConfig()
-                poolCfg.maxIdle = cfg.connectionsMax
-                poolCfg.maxTotal = cfg.connectionsMax
-                poolCfg.minIdle = cfg.connectionsMax / 2
-                poolCfg
-            }.invoke())
+            ConnectionsPool.genericPool(cfg.connectionsMax))
     val resolveProducerMetadataPool = ConnectionsPool(producerPartitionsLeaders.values.toSet(),
-            { hostPort -> SimpleConsumer(hostPort.host,
-                    hostPort.port, cfg.socketTimeoutMills, BlockingChannel.UseDefaultBufferSize(), "aquana-metadata-resolver") },
+            { hostPort -> SimpleConsumer(hostPort.host, hostPort.port, cfg.socketTimeoutMills, BlockingChannel.UseDefaultBufferSize(), "aquana-metadata-resolver") },
             { connection -> connection.close() })
     val (consumerPartitionsMeta, producerPartitionsMeta) = invokeConcurrently(
             { getPartitionsMeta(consumersPool, consumerPartitionsLeaders, cfg.consumerEntryPoint.topic)},

@@ -23,6 +23,14 @@ class ConnectionsPool<T>(hostList: Collection<HostPort>,
 
     companion object {
 
+        fun genericPool(maxTotal: Int, maxIdle: Int = maxTotal, minIdle: Int = maxTotal / 2): GenericObjectPoolConfig {
+            val poolCfg = GenericObjectPoolConfig()
+            poolCfg.maxTotal = maxTotal
+            poolCfg.maxIdle = maxIdle
+            poolCfg.minIdle = minIdle
+            return poolCfg
+        }
+
         /**
          * Wrapper around dirty Kafka API
          */
