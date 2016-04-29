@@ -15,9 +15,6 @@ import java.nio.ByteBuffer
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
-import java.util.stream.Collectors
-import java.util.stream.Stream
-import java.util.stream.StreamSupport
 
 private val logger = LoggerFactory.getLogger("org.wonderbeat.mirror")
 
@@ -50,9 +47,6 @@ fun resolveLeaders(topic: String, host: String, port: Int, socketTimeoutMills: I
     consumer.close()
     return leaders
 }
-
-fun <T> invokeConcurrently(vararg  functions: () -> T): Stream<T> = StreamSupport.stream(functions.toCollection(ArrayList()).spliterator(), true).map { it.invoke() }
-fun <T> Stream<T>.collectToList(): List<T> = this.collect(Collectors.toList<T>()).toList()
 
 fun run(cfg: MirrorConfig): MirrorStatistics {
     logger.debug("About to start: $cfg")

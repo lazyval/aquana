@@ -66,8 +66,7 @@ class PoolAwareConsumer(val topic: String,
             if(response.hasError()) {
                 throw ErrorMapping.exceptionFor(response.errorCode(topic, partition))
             } else {
-                val messages = response.messageSet(topic, partition)
-                return messages
+                return response.messageSet(topic, partition)
             }
         } finally {
             consumersPool.returnConnection(partition, connection)
