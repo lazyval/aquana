@@ -29,9 +29,7 @@ class SkewController(val maxSkew: Int, val bucketsIds: List<Int>,
         return true
     }
 
-    fun isSkewed(): Boolean {
-        return isSkewedWithState().isSkewed
-    }
+    fun isSkewed(): Boolean = isSkewedWithState().isSkewed
 
     private data class SkewState(val isSkewed: Boolean, val bucketState: List<Long>, val min: Long, val max: Long)
 

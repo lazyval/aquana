@@ -12,8 +12,8 @@ import java.util.*
 
 class PartitionConnectionPool<T>(val connections: ConnectionsPool<T>,
                                  val partitionToHostLeader: Map<Int, HostPort>) {
-    fun borrowConnection(partition: Int): T? = connections.hostToConnection[partitionToHostLeader[partition]!!]?.borrowObject()
-    fun returnConnection(partition: Int, con: T) = connections.hostToConnection[partitionToHostLeader[partition]!!]!!.returnObject(con)
+    fun borrowConnection(partition: Int): T? = connections.hostToConnection[partitionToHostLeader[partition]]?.borrowObject()
+    fun returnConnection(partition: Int, con: T) = connections.hostToConnection[partitionToHostLeader[partition]]!!.returnObject(con)
 }
 
 class ConnectionsPool<T>(hostList: Collection<HostPort>,
@@ -64,6 +64,6 @@ class ConnectionsPool<T>(hostList: Collection<HostPort>,
     fun close() = hostToConnection.forEach { it.value.close() }
 
     val hostToConnection: Map<HostPort, ObjectPool<T>> = hostList.associateBy({it},
-            { a -> GenericObjectPool<T>(internalFactory(a), poolCfg)})
+            { GenericObjectPool<T>(internalFactory(it), poolCfg)})
 
 }

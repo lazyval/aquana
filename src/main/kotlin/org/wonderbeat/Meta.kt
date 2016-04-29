@@ -9,7 +9,7 @@ fun getPartitionsMeta(consumersPool: ConnectionsPool<SimpleConsumer>, leaders: M
         List<PartitionMeta> {
     fun <T> tryResolve(resolve: (consumer: SimpleConsumer) -> T, host: HostPort): T {
         val connectionPool = consumersPool.hostToConnection[host]!!
-        val consumer = connectionPool.borrowObject()!!
+        val consumer = connectionPool.borrowObject()
         try {
             return resolve(consumer)
         } finally {
