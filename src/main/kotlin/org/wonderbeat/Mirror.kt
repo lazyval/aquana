@@ -18,6 +18,7 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import java.util.stream.Collectors
+import java.util.stream.Stream
 import java.util.stream.StreamSupport
 
 private val logger = LoggerFactory.getLogger("org.wonderbeat.mirror")
@@ -52,22 +53,19 @@ fun resolveLeaders(topic: String, host: String, port: Int, socketTimeoutMills: I
     return leaders
 }
 
+fun <T> invokeConcurrently(vararg  functions: () -> T): Stream<T> = StreamSupport.stream(functions.toCollection(ArrayList()).spliterator(), true).map { it.invoke() }
+fun <T> Stream<T>.collectToList(): List<T> = this.collect(Collectors.toList<T>()).toList()
+
 fun run(cfg: MirrorConfig): MirrorStatistics {
     logger.debug("About to start: $cfg")
     val environment = Environment(mapOf(Pair(Environment.THREAD_POOL, ThreadPoolExecutorDispatcher(4, 4, "work-pool"))), PropertiesConfigurationReader())
     environment.setDispatcher("in-io-dispatcher", ThreadPoolExecutorDispatcher(cfg.threadCountIn, cfg.backlog, "io-input-pool"))
     environment.setDispatcher("out-io-dispatcher", ThreadPoolExecutorDispatcher(cfg.threadCountOut, cfg.backlog, "io-output-pool"))
-    val (consumerPartitionsLeaders, producerPartitionsLeaders) = StreamSupport.stream(listOf(
-            {
-                resolveLeaders(cfg.consumerEntryPoint.topic, cfg.consumerEntryPoint.host, cfg.consumerEntryPoint.port, cfg.socketTimeoutMills)
-            },
-            {
-                resolveLeaders(cfg.producerEntryPoint.topic, cfg.producerEntryPoint.host, cfg.producerEntryPoint.port, cfg.socketTimeoutMills)
-            } )
-            .toCollection(ArrayList()).spliterator(), true)
-            .map { it.invoke() }
+    val (consumerPartitionsLeaders, producerPartitionsLeaders) = invokeConcurrently(
+            { resolveLeaders(cfg.consumerEntryPoint.topic, cfg.consumerEntryPoint.host, cfg.consumerEntryPoint.port, cfg.socketTimeoutMills) },
+            { resolveLeaders(cfg.producerEntryPoint.topic, cfg.producerEntryPoint.host, cfg.producerEntryPoint.port, cfg.socketTimeoutMills) })
             .map { if(cfg.onlyPartitions != null) { it.filterKeys { cfg.onlyPartitions.contains(it) } } else it }
-            .collect(Collectors.toList<Map<Int,HostPort>>()).toList()
+            .collectToList<Map<Int,HostPort>>()
     Preconditions.checkState(consumerPartitionsLeaders.keys.size <= cfg.backlog,
             "Backlog value [${cfg.backlog}] should be greater than partition count [${consumerPartitionsLeaders.keys.size}]")
     Preconditions.checkState(consumerPartitionsLeaders.size == producerPartitionsLeaders.size,
@@ -98,12 +96,10 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
             { hostPort -> SimpleConsumer(hostPort.host,
                     hostPort.port, cfg.socketTimeoutMills, BlockingChannel.UseDefaultBufferSize(), "aquana-metadata-resolver") },
             { connection -> connection.close() })
-    val (consumerPartitionsMeta, producerPartitionsMeta) = StreamSupport.stream(listOf(
-                    { getPartitionsMeta(consumersPool, consumerPartitionsLeaders, cfg.consumerEntryPoint.topic)},
-                    { getPartitionsMeta(resolveProducerMetadataPool, producerPartitionsLeaders, cfg.producerEntryPoint.topic)})
-            .toCollection(ArrayList()).spliterator(), true)
-            .map { it.invoke() }
-            .collect(Collectors.toList<List<PartitionMeta>>()).toList()
+    val (consumerPartitionsMeta, producerPartitionsMeta) = invokeConcurrently(
+            { getPartitionsMeta(consumersPool, consumerPartitionsLeaders, cfg.consumerEntryPoint.topic)},
+            { getPartitionsMeta(resolveProducerMetadataPool, producerPartitionsLeaders, cfg.producerEntryPoint.topic)})
+            .collectToList()
     resolveProducerMetadataPool.close()
     val consumers = initConsumers(consumersPool, consumerPartitionsMeta, cfg.fetchSize, cfg.startFrom)
     val producers = initProducers(producersPool, producerPartitionsMeta)
