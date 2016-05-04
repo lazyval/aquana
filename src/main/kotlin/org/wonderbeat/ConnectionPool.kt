@@ -1,5 +1,6 @@
 package org.wonderbeat
 
+import kafka.message.CompressionCodec
 import kafka.producer.SyncProducer
 import kafka.producer.SyncProducerConfig
 import org.apache.commons.pool2.BasePooledObjectFactory
@@ -34,7 +35,7 @@ class ConnectionsPool<T>(hostList: Collection<HostPort>,
         /**
          * Wrapper around dirty Kafka API
          */
-        fun syncProducer(hostPort: HostPort, socketTimeoutMills: Int, requestTimeout: Int,
+        fun syncProducer(hostPort: HostPort, socketTimeoutMills: Int, requestTimeout: Int, compressionCodec: CompressionCodec,
                          sendBufferBytes: Int = 3*1024*1024, clientId: String = "aquana-producer"): SyncProducer {
             val p = Properties()
             p.put("host", hostPort.host)
@@ -43,6 +44,7 @@ class ConnectionsPool<T>(hostList: Collection<HostPort>,
             p.put("request.timeout.ms", requestTimeout.toString())
             p.put("send.buffer.bytes", sendBufferBytes.toString() )
             p.put("client.id",  clientId)
+            p.put("compression.codec", compressionCodec.name())
             return SyncProducer(SyncProducerConfig(p))
         }
 

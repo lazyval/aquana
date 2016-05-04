@@ -3,6 +3,7 @@ package org.wonderbeat
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import kafka.message.`CompressionCodec$`
 import org.apache.commons.cli.DefaultParser
 import org.apache.commons.cli.HelpFormatter
 import org.apache.commons.cli.Option
@@ -33,6 +34,7 @@ fun main(args : Array<String>) {
     opts.addOption(Option("producerPort", true, "[Int] Optional. Destination Kafka port. Default: $defaultPort" ))
     opts.addOption(Option("producerTopic", true, "[String] Optional. Destination Kafka topic. Default: consumerTopic" ))
     val defaultPoolSize = 10
+    opts.addOption(Option("compressionCodec", true, "[String] Optional. Which compression codec PRODUCER should use. Default 'none'. Possible values are 'gzip' and 'snappy'"))
     opts.addOption(Option("inputPool", true, "[Int] Optional. Consumer thread pool size. Default: $defaultPoolSize" ))
     opts.addOption(Option("outputPool", true, "[Int] Optional. Producer thread pool size. Default: $defaultPoolSize" ))
     val defaultTcpBuffer = 1024 * 1024 * 2
@@ -92,7 +94,8 @@ fun main(args : Array<String>) {
             requestTimeout = options.getOptionValue("requestTimeout", defaultRequestTimeout.toString()).toInt(),
             skewFactor = options.getOptionValue("skew", defaultSkew.toString()).toInt(),
             onlyPartitions = options.getOptionValue("partitions")?.split(",")?.map { it.trim().toInt() },
-            startFrom = startFrom
+            startFrom = startFrom,
+            compressionCodec = `CompressionCodec$`.`MODULE$`.getCompressionCodec(options.getOptionValue("compressionCodec", "none"))
     )
     if(options.hasOption("genetics")) {
         logger.info("Genetic test started")
