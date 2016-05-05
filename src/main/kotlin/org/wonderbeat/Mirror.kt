@@ -3,6 +3,8 @@ package org.wonderbeat
 import com.google.common.base.Preconditions
 import kafka.consumer.SimpleConsumer
 import kafka.message.ByteBufferMessageSet
+import kafka.message.CompressionCodec
+import kafka.message.`NoCompressionCodec$`
 import kafka.network.BlockingChannel
 import org.slf4j.LoggerFactory
 import reactor.Environment
@@ -34,7 +36,8 @@ data class MirrorConfig(val consumerEntryPoint: HostPortTopic,
                         val requestTimeout: Int = 10000,
                         val onlyPartitions: List<Int>? = null,
                         val startFrom: (PartitionMeta) -> Long = startFromTheBeginning,
-                        val timeoutMillis: Long = -1)
+                        val timeoutMillis: Long = -1,
+                        val compressionCodec: CompressionCodec = `NoCompressionCodec$`.`MODULE$`)
 
 
 data class MirrorStatistics(val consumerPartitionStat: Map<Int, OffsetStatistics>, val messagesPerSecondTotal: Int)
@@ -65,7 +68,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
                     "Count mismatch")
 
     val producersPool = ConnectionsPool(producerPartitionsLeaders.values.toSet(),
-            { hostPort -> ConnectionsPool.syncProducer(hostPort, cfg.socketTimeoutMills, cfg.requestTimeout)},
+            { hostPort -> ConnectionsPool.syncProducer(hostPort, cfg.socketTimeoutMills, cfg.requestTimeout, cfg.compressionCodec)},
             { it.close() },
             ConnectionsPool.genericPool(cfg.connectionsMax))
     val consumersPool = ConnectionsPool(consumerPartitionsLeaders.values.toSet(),
