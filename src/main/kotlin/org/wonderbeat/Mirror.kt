@@ -68,7 +68,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
                     "Count mismatch")
 
     val producersPool = ConnectionsPool(producerPartitionsLeaders.values.toSet(),
-            { hostPort -> ConnectionsPool.syncProducer(hostPort, cfg.socketTimeoutMills, cfg.requestTimeout, cfg.compressionCodec)},
+            { hostPort -> ConnectionsPool.syncProducer(hostPort, cfg.socketTimeoutMills, cfg.requestTimeout)},
             { it.close() },
             ConnectionsPool.genericPool(cfg.connectionsMax))
     val consumersPool = ConnectionsPool(consumerPartitionsLeaders.values.toSet(),
@@ -84,7 +84,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
             .collectToList()
     resolveProducerMetadataPool.close()
     val consumers = initConsumers(consumersPool, consumerPartitionsMeta, cfg.fetchSize, cfg.startFrom)
-    val producers = initProducers(producersPool, producerPartitionsMeta)
+    val producers = initProducers(producersPool, producerPartitionsMeta, cfg.compressionCodec)
     val offsetWeStartWith = consumers.associateBy({it.partition()}, {it.offset()})
 
     class ReadKafka
