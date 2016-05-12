@@ -3,7 +3,9 @@ package org.wonderbeat
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import kafka.message.CompressionCodec
 import kafka.message.`CompressionCodec$`
+import kafka.message.`NoCompressionCodec$`
 import org.apache.commons.cli.DefaultParser
 import org.apache.commons.cli.HelpFormatter
 import org.apache.commons.cli.Option
@@ -21,6 +23,22 @@ import java.time.LocalDateTime
 import java.util.function.Function
 
 private val logger = LoggerFactory.getLogger("org.wonderbeat.aquana")
+
+data class MirrorConfig(val consumerEntryPoint: HostPortTopic,
+                        val producerEntryPoint: HostPortTopic,
+                        val readBuffer: Int,
+                        val threadCountIn: Int, val threadCountOut: Int,
+                        val fetchSize: Int,
+                        val connectionsMax: Int,
+                        val backlog: Int,
+                        val skewFactor: Int,
+                        val socketTimeoutMills: Int = 9000,
+                        val requestTimeout: Int = 10000,
+                        val onlyPartitions: List<Int>? = null,
+                        val startFrom: (PartitionMeta) -> Long = startFromTheBeginning,
+                        val timeoutMillis: Long = -1,
+                        val compressionCodec: CompressionCodec = `NoCompressionCodec$`.`MODULE$`)
+
 
 fun main(args : Array<String>) {
     val parser = DefaultParser();

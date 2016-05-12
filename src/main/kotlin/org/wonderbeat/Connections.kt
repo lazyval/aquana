@@ -1,6 +1,7 @@
 package org.wonderbeat
 
 import kafka.consumer.SimpleConsumer
+import kafka.network.BlockingChannel
 import kafka.producer.SyncProducer
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicLong
@@ -42,4 +43,12 @@ fun initProducers(pool: ConnectionsPool<SyncProducer>,
         RetryingProducer(PoolAwareProducer(it.topic, it.partition, PartitionConnectionPool(pool,
                 producerLeaders)))
     }
+}
+
+fun resolveLeaders(hostPortTopic: HostPortTopic, socketTimeoutMills: Int = 10000,
+                   bufferSize: Int = BlockingChannel.UseDefaultBufferSize(), clientId: String = "aquana-metadata-resolver"): Map<Int, HostPort>  {
+    val consumer = SimpleConsumer(hostPortTopic.host, hostPortTopic.port, socketTimeoutMills, bufferSize, clientId)
+    val leaders = consumer.resolveLeaders(hostPortTopic.topic)
+    consumer.close()
+    return leaders
 }

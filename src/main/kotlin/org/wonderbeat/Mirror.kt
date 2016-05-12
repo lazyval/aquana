@@ -3,14 +3,13 @@ package org.wonderbeat
 import com.google.common.base.Preconditions
 import kafka.consumer.SimpleConsumer
 import kafka.message.ByteBufferMessageSet
-import kafka.message.CompressionCodec
-import kafka.message.`NoCompressionCodec$`
 import kafka.network.BlockingChannel
 import org.slf4j.LoggerFactory
 import reactor.Environment
 import reactor.bus.Event
 import reactor.bus.EventBus
 import reactor.bus.selector.Selectors
+import reactor.core.Dispatcher
 import reactor.core.dispatch.ThreadPoolExecutorDispatcher
 import reactor.rx.Promise
 import java.nio.ByteBuffer
@@ -23,39 +22,22 @@ private val logger = LoggerFactory.getLogger("org.wonderbeat.mirror")
 data class Ticket(val reader: MonotonicConsumer, val writer: Producer, var messages: ByteBufferMessageSet = emptyBuffer) {
     override fun toString() = "{${Ticket::class.java}: r: $reader, w: $writer, msg: ${messages.size()}}"
 }
-
-val emptyBuffer = ByteBufferMessageSet(ByteBuffer.allocate(0))
-
 data class HostPortTopic(val host: String, val port: Int, val topic: String)
-data class MirrorConfig(val consumerEntryPoint: HostPortTopic,
-                        val producerEntryPoint: HostPortTopic,
-                        val readBuffer: Int, val threadCountIn: Int, val threadCountOut: Int,
-                        val fetchSize: Int, val connectionsMax: Int,
-                        val backlog: Int, val skewFactor: Int,
-                        val socketTimeoutMills: Int = 9000,
-                        val requestTimeout: Int = 10000,
-                        val onlyPartitions: List<Int>? = null,
-                        val startFrom: (PartitionMeta) -> Long = startFromTheBeginning,
-                        val timeoutMillis: Long = -1,
-                        val compressionCodec: CompressionCodec = `NoCompressionCodec$`.`MODULE$`)
-
-
 data class MirrorStatistics(val consumerPartitionStat: Map<Int, OffsetStatistics>, val messagesPerSecondTotal: Int)
 data class OffsetStatistics(val startOffset: Long, val endOffset: Long)
+val emptyBuffer = ByteBufferMessageSet(ByteBuffer.allocate(0))
 
-fun resolveLeaders(hostPortTopic: HostPortTopic, socketTimeoutMills: Int = 10000,
-                   bufferSize: Int = BlockingChannel.UseDefaultBufferSize(), clientId: String = "aquana-metadata-resolver"): Map<Int, HostPort>  {
-    val consumer = SimpleConsumer(hostPortTopic.host, hostPortTopic.port, socketTimeoutMills, bufferSize, clientId)
-    val leaders = consumer.resolveLeaders(hostPortTopic.topic)
-    consumer.close()
-    return leaders
+data class Dispatchers(val input: Dispatcher, val output: Dispatcher)
+fun initDispatchers(env: Environment, cfg: MirrorConfig): Dispatchers {
+    env.setDispatcher("in-io-dispatcher", ThreadPoolExecutorDispatcher(cfg.threadCountIn, cfg.backlog, "io-input-pool"))
+    env.setDispatcher("out-io-dispatcher", ThreadPoolExecutorDispatcher(cfg.threadCountOut, cfg.backlog, "io-output-pool"))
+    return Dispatchers(env.getDispatcher("in-io-dispatcher"), env.getDispatcher("out-io-dispatcher"))
 }
 
 fun run(cfg: MirrorConfig): MirrorStatistics {
     logger.debug("About to start: $cfg")
     val environment = Environment()
-    environment.setDispatcher("in-io-dispatcher", ThreadPoolExecutorDispatcher(cfg.threadCountIn, cfg.backlog, "io-input-pool"))
-    environment.setDispatcher("out-io-dispatcher", ThreadPoolExecutorDispatcher(cfg.threadCountOut, cfg.backlog, "io-output-pool"))
+    val dispatchers = initDispatchers(environment, cfg)
     val (consumerPartitionsLeaders, producerPartitionsLeaders) =
             invokeConcurrently({ resolveLeaders(cfg.consumerEntryPoint) }, { resolveLeaders(cfg.producerEntryPoint) })
             .map { if(cfg.onlyPartitions != null) { it.filterKeys { cfg.onlyPartitions.contains(it) } } else it }
@@ -89,9 +71,8 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     class ReadKafka
     class WriteKafka
     val stopPromise = Promise<Event<Unit>>()
-
-    val inIOEventBus = EventBus(environment.getDispatcher("in-io-dispatcher"), null, null, { stopPromise.tryOnError(it) } )
-    val outIOEventBus = EventBus(environment.getDispatcher("out-io-dispatcher"), null, null, { stopPromise.tryOnError(it) })
+    val inIOEventBus = EventBus(dispatchers.input, null, null, { stopPromise.tryOnError(it) } )
+    val outIOEventBus = EventBus(dispatchers.output, null, null, { stopPromise.tryOnError(it) })
 
     val readEvt = inIOEventBus.on(Selectors.`type`(ReadKafka::class.java), { input: Event<Ticket> ->
         val ticket = input.data
@@ -129,7 +110,6 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     if(cfg.timeoutMillis > 0) {
         timer.schedule(object: TimerTask() { override fun run() { stopPromise.accept(Event(Unit)) } }, cfg.timeoutMillis)
     }
-
     logger.debug("Awaiting termination")
     stopPromise.await(2001, TimeUnit.DAYS)
     timer.cancel()
