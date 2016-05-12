@@ -43,10 +43,10 @@ data class MirrorConfig(val consumerEntryPoint: HostPortTopic,
 data class MirrorStatistics(val consumerPartitionStat: Map<Int, OffsetStatistics>, val messagesPerSecondTotal: Int)
 data class OffsetStatistics(val startOffset: Long, val endOffset: Long)
 
-fun resolveLeaders(topic: String, host: String, port: Int, socketTimeoutMills: Int,
+fun resolveLeaders(hostPortTopic: HostPortTopic, socketTimeoutMills: Int = 10000,
                    bufferSize: Int = BlockingChannel.UseDefaultBufferSize(), clientId: String = "aquana-metadata-resolver"): Map<Int, HostPort>  {
-    val consumer = SimpleConsumer(host, port, socketTimeoutMills, bufferSize, clientId)
-    val leaders = consumer.resolveLeaders(topic)
+    val consumer = SimpleConsumer(hostPortTopic.host, hostPortTopic.port, socketTimeoutMills, bufferSize, clientId)
+    val leaders = consumer.resolveLeaders(hostPortTopic.topic)
     consumer.close()
     return leaders
 }
@@ -56,9 +56,8 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     val environment = Environment()
     environment.setDispatcher("in-io-dispatcher", ThreadPoolExecutorDispatcher(cfg.threadCountIn, cfg.backlog, "io-input-pool"))
     environment.setDispatcher("out-io-dispatcher", ThreadPoolExecutorDispatcher(cfg.threadCountOut, cfg.backlog, "io-output-pool"))
-    val (consumerPartitionsLeaders, producerPartitionsLeaders) = invokeConcurrently(
-            { resolveLeaders(cfg.consumerEntryPoint.topic, cfg.consumerEntryPoint.host, cfg.consumerEntryPoint.port, cfg.socketTimeoutMills) },
-            { resolveLeaders(cfg.producerEntryPoint.topic, cfg.producerEntryPoint.host, cfg.producerEntryPoint.port, cfg.socketTimeoutMills) })
+    val (consumerPartitionsLeaders, producerPartitionsLeaders) =
+            invokeConcurrently({ resolveLeaders(cfg.consumerEntryPoint) }, { resolveLeaders(cfg.producerEntryPoint) })
             .map { if(cfg.onlyPartitions != null) { it.filterKeys { cfg.onlyPartitions.contains(it) } } else it }
             .collectToList<Map<Int,HostPort>>()
     Preconditions.checkState(consumerPartitionsLeaders.keys.size <= cfg.backlog,
