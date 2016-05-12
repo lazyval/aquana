@@ -1,5 +1,6 @@
 *.idea
 *.iml
 *target
+*.log
 
 dependency-reduced-pom.xml
