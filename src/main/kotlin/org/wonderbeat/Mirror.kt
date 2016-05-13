@@ -57,14 +57,17 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
             { hostPort -> ConnectionsPool.syncProducer(hostPort, cfg.socketTimeoutMills, cfg.requestTimeout, cfg.compressionCodec)},
             { it.close() },
             ConnectionsPool.genericPool(cfg.connectionsMax))
-    val resolveProducerMetadataPool = ConnectionsPool(producerPartitionsLeaders.values.toSet(),
-            { hostPort -> SimpleConsumer(hostPort.host, hostPort.port, cfg.socketTimeoutMills, BlockingChannel.UseDefaultBufferSize(), "aquana-metadata-resolver") },
-            { it.close() })
     val (consumerPartitionsMeta, producerPartitionsMeta) = invokeConcurrently(
             { getPartitionsMeta(consumersPool, consumerPartitionsLeaders, cfg.consumerEntryPoint.topic)},
-            { getPartitionsMeta(resolveProducerMetadataPool, producerPartitionsLeaders, cfg.producerEntryPoint.topic)})
-            .collectToList()
-    resolveProducerMetadataPool.close()
+            {
+                val resolveProducerMetadataPool = ConnectionsPool(producerPartitionsLeaders.values.toSet(),
+                    { hostPort -> SimpleConsumer(hostPort.host, hostPort.port, cfg.socketTimeoutMills, BlockingChannel.UseDefaultBufferSize(), "aquana-metadata-resolver") },
+                    { it.close() })
+                getPartitionsMeta(resolveProducerMetadataPool, producerPartitionsLeaders, cfg.producerEntryPoint.topic).apply {
+                    resolveProducerMetadataPool.close()
+                }
+            }).collectToList()
+
     val producers = initProducers(producersPool, producerPartitionsMeta)
     val consumers = initConsumers(consumersPool, consumerPartitionsMeta, cfg.fetchSize, cfg.startFrom)
     val offsetWeStartWith = consumers.mapValues {it.value.offset()}
