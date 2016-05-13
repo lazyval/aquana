@@ -80,7 +80,11 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
         outIOEventBus.notify(WriteKafka::class.java, input)
     })
 
-    val skewControl = SkewController(cfg.skewFactor, consumers.map { it.partition() })
+    val skewControl: SkewControl = if(cfg.skewFactor != null) {
+        ConcurrentSkewControl(cfg.skewFactor, consumers.map { it.partition() })
+    } else {
+        NoopSkewControl
+    }
     val msgCount = AtomicLong(0)
     val writeEvt = outIOEventBus.on(Selectors.`type`(WriteKafka::class.java), { input: Event<Ticket> ->
         val ticket = input.data

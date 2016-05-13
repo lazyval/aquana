@@ -4,17 +4,25 @@ import com.google.common.util.concurrent.RateLimiter
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicLong
 
+interface SkewControl {
+    fun tryAdvance(id: Int): Boolean
+}
+
+object NoopSkewControl: SkewControl {
+    override fun tryAdvance(id: Int): Boolean = true
+}
+
 /**
  * Kinda Monotonic checker
  */
-class SkewController(val maxSkew: Int, val bucketsIds: List<Int>,
-                     val limitLoggingPermitsPerSecond: RateLimiter = RateLimiter.create(0.05)) {
+class ConcurrentSkewControl(val maxSkew: Int, val bucketsIds: List<Int>,
+                            val limitLoggingPermitsPerSecond: RateLimiter = RateLimiter.create(0.05)): SkewControl {
 
-    private val logger = LoggerFactory.getLogger(SkewController::class.java)
+    private val logger = LoggerFactory.getLogger(ConcurrentSkewControl::class.java)
 
     private val buckets = (1..bucketsIds.size).map { AtomicLong(0) }
 
-    fun tryAdvance(bucketId: Int) = tryAdvance(bucketId, 1)
+    override fun tryAdvance(id: Int) = tryAdvance(id, 1)
 
     fun tryAdvance(bucketId: Int, size: Long): Boolean {
         val bucketPosition = bucketsIds.indexOf(bucketId)

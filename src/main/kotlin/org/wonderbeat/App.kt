@@ -31,7 +31,7 @@ data class MirrorConfig(val consumerEntryPoint: HostPortTopic,
                         val fetchSize: Int,
                         val connectionsMax: Int,
                         val backlog: Int,
-                        val skewFactor: Int,
+                        val skewFactor: Int?,
                         val socketTimeoutMills: Int = 9000,
                         val requestTimeout: Int = 10000,
                         val onlyPartitions: List<Int>? = null,
@@ -69,9 +69,8 @@ fun main(args : Array<String>) {
     opts.addOption(Option("socketTimeout", true, "[Int] Optional. Socket timeout milliseconds. Default $defaultSocketTimeout"))
     val defaultRequestTimeout = 10000
     opts.addOption(Option("requestTimeout", true, "[Int] Optional. The ack timeout of the producer requests. Value must be non-negative and non-zero. Default $defaultRequestTimeout"))
-    val defaultSkew = 2
     opts.addOption(Option("skew", true, "[Int] Optional. Cross-partition skew factor. Specifies how many batches could one partition be " +
-            "ahead of another while mirroring. 1 - if you want all partitions to be mirrored evenly. Default $defaultSkew"))
+            "ahead of another while mirroring. 1 - if you want all partitions to be mirrored evenly. Default: disabled"))
     opts.addOption(Option("partitions", true, "[List[Int]] - Optional. Partition numbers to mirror separated by ','"))
     opts.addOption(Option("startFrom", true, "[0|62|100] - Optional. Default: 0. Offset position from the beginning (percents) mirror should start from. Overrides startFromDetailed"))
     opts.addOption(Option("startFromDetailed", true, "[partition:offset, ...] - Optional. Offset position for each partition to start from"))
@@ -110,7 +109,7 @@ fun main(args : Array<String>) {
             backlog = options.getOptionValue("backlog", defaultBacklog.toString()).toInt(),
             socketTimeoutMills = options.getOptionValue("socketTimeout", defaultSocketTimeout.toString()).toInt(),
             requestTimeout = options.getOptionValue("requestTimeout", defaultRequestTimeout.toString()).toInt(),
-            skewFactor = options.getOptionValue("skew", defaultSkew.toString()).toInt(),
+            skewFactor = options.getOptionValue("skew")?.toInt(),
             onlyPartitions = options.getOptionValue("partitions")?.split(",")?.map { it.trim().toInt() },
             startFrom = startFrom,
             compressionCodec = `CompressionCodec$`.`MODULE$`.getCompressionCodec(options.getOptionValue("compressionCodec", "none"))

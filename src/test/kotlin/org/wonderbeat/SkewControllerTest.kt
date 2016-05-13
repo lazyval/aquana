@@ -6,7 +6,7 @@ import org.junit.Test
 class SkewControllerTest {
 
     @Test fun testAdvance() {
-        val controller = SkewController(2, listOf(0,1,2))
+        val controller = ConcurrentSkewControl(2, listOf(0,1,2))
         assert(controller.tryAdvance(1))
         controller.tryAdvance(1)
         controller.tryAdvance(1)
@@ -16,7 +16,7 @@ class SkewControllerTest {
     }
 
     @Test fun testSkewController() {
-        val controller = SkewController(2, listOf(1,2))
+        val controller = ConcurrentSkewControl(2, listOf(1,2))
         controller.tryAdvance(1)
         assert(controller.isSkewed() == false)
         controller.tryAdvance(1)
