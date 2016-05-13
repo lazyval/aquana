@@ -77,18 +77,17 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     val dispatchers = initDispatchers(environment, cfg)
     val inIOEventBus = EventBus(dispatchers.input, null, null, { stopPromise.tryOnError(it) } )
     val outIOEventBus = EventBus(dispatchers.output, null, null, { stopPromise.tryOnError(it) })
+    val skewControl: SkewControl = when (cfg.skewFactor) {
+        null -> NoopSkewControl
+        else -> ConcurrentSkewControl(cfg.skewFactor, consumers.keys.toList())
+    }
+    val msgCount = AtomicLong()
 
     val readEvt = inIOEventBus.on(Selectors.`type`(ReadKafka::class.java), { input: Event<Ticket> ->
         val ticket = input.data
         input.data.messages = ticket.reader.fetch()
         outIOEventBus.notify(WriteKafka::class.java, input)
     })
-
-    val skewControl: SkewControl = when (cfg.skewFactor) {
-        null -> NoopSkewControl
-        else -> ConcurrentSkewControl(cfg.skewFactor, consumers.keys.toList())
-    }
-    val msgCount = AtomicLong()
     val writeEvt = outIOEventBus.on(Selectors.`type`(WriteKafka::class.java), { input: Event<Ticket> ->
         val ticket = input.data
         val messages = ticket.messages
@@ -104,7 +103,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
 
     val startedTime = System.currentTimeMillis()
     val partitionsFitsBacklog: Int = cfg.backlog / consumerPartitionsLeaders.size
-    partitionsFitsBacklog.downTo(1).forEach { i ->
+    (1 .. partitionsFitsBacklog).forEach { i ->
         logger.debug("Submitting tickets - round $i")
         consumerPartitionsLeaders.keys.forEach { num ->
             inIOEventBus.notify(ReadKafka::class.java, Event.wrap(Ticket(num, consumers[num]!!, producers[num]!!)))
@@ -117,13 +116,13 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     logger.debug("Awaiting termination")
     stopPromise.await(2001, TimeUnit.DAYS)
     timer.cancel()
-    val stoppedTime = System.currentTimeMillis();
-    val finalCount = msgCount.get()
-    val perMillis = finalCount.toDouble() / (stoppedTime - startedTime).toDouble()
     readEvt.cancel()
     writeEvt.cancel()
     environment.shutdown()
     consumersPool.close()
+    val finalCount = msgCount.get()
+    val stoppedTime = System.currentTimeMillis();
+    val perMillis = finalCount.toDouble() / (stoppedTime - startedTime).toDouble()
     logger.info("Wrote $finalCount messages, ${perMillis * 1000} msg per second")
     return MirrorStatistics(consumerPartitionsMeta
             .associateBy({ it.partition }, { p -> OffsetStatistics(offsetWeStartWith[p.partition]!!,
