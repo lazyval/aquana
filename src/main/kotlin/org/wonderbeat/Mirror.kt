@@ -36,8 +36,6 @@ fun initDispatchers(env: Environment, cfg: MirrorConfig): Dispatchers {
 
 fun run(cfg: MirrorConfig): MirrorStatistics {
     logger.debug("About to start: $cfg")
-    val environment = Environment()
-    val dispatchers = initDispatchers(environment, cfg)
     val (consumerPartitionsLeaders, producerPartitionsLeaders) =
             invokeConcurrently({ resolveLeaders(cfg.consumerEntryPoint) }, { resolveLeaders(cfg.producerEntryPoint) })
             .map { if(cfg.onlyPartitions != null) { it.filterKeys { cfg.onlyPartitions.contains(it) } } else it }
@@ -70,11 +68,13 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
 
     val producers = initProducers(producersPool, producerPartitionsMeta)
     val consumers = initConsumers(consumersPool, consumerPartitionsMeta, cfg.fetchSize, cfg.startFrom)
-    val offsetWeStartWith = consumers.mapValues {it.value.offset()}
+    val offsetWeStartWith = consumers.mapValues { it.value.offset() }
 
     class ReadKafka
     class WriteKafka
     val stopPromise = Promise<Event<Unit>>()
+    val environment = Environment()
+    val dispatchers = initDispatchers(environment, cfg)
     val inIOEventBus = EventBus(dispatchers.input, null, null, { stopPromise.tryOnError(it) } )
     val outIOEventBus = EventBus(dispatchers.output, null, null, { stopPromise.tryOnError(it) })
 
@@ -84,12 +84,11 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
         outIOEventBus.notify(WriteKafka::class.java, input)
     })
 
-    val skewControl: SkewControl = if(cfg.skewFactor != null) {
-        ConcurrentSkewControl(cfg.skewFactor, consumers.keys.toList())
-    } else {
-        NoopSkewControl
+    val skewControl: SkewControl = when (cfg.skewFactor) {
+        null -> NoopSkewControl
+        else -> ConcurrentSkewControl(cfg.skewFactor, consumers.keys.toList())
     }
-    val msgCount = AtomicLong(0)
+    val msgCount = AtomicLong()
     val writeEvt = outIOEventBus.on(Selectors.`type`(WriteKafka::class.java), { input: Event<Ticket> ->
         val ticket = input.data
         val messages = ticket.messages
