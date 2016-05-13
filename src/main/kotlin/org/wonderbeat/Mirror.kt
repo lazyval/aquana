@@ -66,7 +66,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     resolveProducerMetadataPool.close()
     val consumers = initConsumers(consumersPool, consumerPartitionsMeta, cfg.fetchSize, cfg.startFrom)
     val producers = initProducers(producersPool, producerPartitionsMeta)
-    val offsetWeStartWith = consumers.associateBy({it.partition()}, {it.offset()})
+    val offsetWeStartWith = consumers.mapValues {it.value.offset()}
 
     class ReadKafka
     class WriteKafka
@@ -81,7 +81,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     })
 
     val skewControl: SkewControl = if(cfg.skewFactor != null) {
-        ConcurrentSkewControl(cfg.skewFactor, consumers.map { it.partition() })
+        ConcurrentSkewControl(cfg.skewFactor, consumers.keys.toList())
     } else {
         NoopSkewControl
     }
@@ -105,8 +105,8 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
         logger.debug("Submitting tickets - round $i")
         consumerPartitionsLeaders.keys.forEach { num ->
             inIOEventBus.notify(ReadKafka::class.java, Event.wrap(Ticket(
-                    consumers.find { it.partition() == num }!!,
-                    producers.find { it.partition() == num }!!
+                    consumers[num]!!,
+                    producers[num]!!
             )))
         }
     }
@@ -127,7 +127,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     logger.info("Wrote $finalCount messages, ${perMillis * 1000} msg per second")
     return MirrorStatistics(consumerPartitionsMeta
             .associateBy({ it.partition }, { p -> OffsetStatistics(offsetWeStartWith[p.partition]!!,
-                    consumers.find { it.partition() == p.partition }!!.offset())}),
+                    consumers[p.partition]!!.offset())}),
                     (perMillis * 1000).toInt())
 }
 

@@ -11,16 +11,16 @@ private val logger = LoggerFactory.getLogger("org.wonderbeat.connections")
 fun initConsumers(pool: ConnectionsPool<SimpleConsumer>,
                   partitionsMeta: List<PartitionMeta>,
                   fetchSize: Int = 1024 * 1024 * 7,
-                  startFromOffset: (PartitionMeta) -> Long = startFromTheEnd
-): List<MonotonicConsumer> {
+                  startFromOffset: (PartitionMeta) -> Long = startFromTheEnd): Map<Int, MonotonicConsumer> {
     val consumerLeaders = partitionsMeta.associateBy({it.partition}, {it.leader})
     logger.debug("Consumer Leaders: $consumerLeaders")
-    return partitionsMeta.map {
-        RetryingConsumer(MonotonicConcurrentConsumer(
-                PoolAwareConsumer(it.topic, it.partition,
-                        PartitionConnectionPool(pool, consumerLeaders), fetchSize),
-                AtomicLong(startFromOffset(it))))
-    }
+    return partitionsMeta.associateBy({ it.partition } ,
+            {
+                RetryingConsumer(MonotonicConcurrentConsumer(
+                        PoolAwareConsumer(it.topic, it.partition,
+                                PartitionConnectionPool(pool, consumerLeaders), fetchSize),
+                        AtomicLong(startFromOffset(it))))
+            })
 }
 
 val startFromTheEnd = { meta: PartitionMeta -> meta.endOffset }
@@ -36,13 +36,13 @@ fun startWithOffsets(offsets: Map<Int, Long>,
 
 
 fun initProducers(pool: ConnectionsPool<SyncProducer>,
-                  partitionsMeta: List<PartitionMeta>): List<Producer> {
+                  partitionsMeta: List<PartitionMeta>): Map<Int, Producer> {
     val producerLeaders = partitionsMeta.associateBy({it.partition}, {it.leader})
     logger.debug("Producer Leaders: $producerLeaders")
-    return  partitionsMeta.map {
+    return  partitionsMeta.associateBy({ it.partition }, {
         RetryingProducer(PoolAwareProducer(it.topic, it.partition, PartitionConnectionPool(pool,
                 producerLeaders)))
-    }
+    })
 }
 
 fun resolveLeaders(hostPortTopic: HostPortTopic, socketTimeoutMills: Int = 10000,
