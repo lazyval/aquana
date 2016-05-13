@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 private val logger = LoggerFactory.getLogger("org.wonderbeat.mirror")
 
-data class Ticket(val reader: MonotonicConsumer, val writer: Producer, var messages: ByteBufferMessageSet = emptyBuffer) {
+data class Ticket(val taskId: Int, val reader: MonotonicConsumer, val writer: Producer, var messages: ByteBufferMessageSet = emptyBuffer) {
     override fun toString() = "{${Ticket::class.java}: r: $reader, w: $writer, msg: ${messages.size()}}"
 }
 data class HostPortTopic(val host: String, val port: Int, val topic: String)
@@ -48,12 +48,13 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
             "Can't mirror from ${consumerPartitionsLeaders.size} partitions to ${producerPartitionsLeaders.size} partitions. " +
                     "Count mismatch")
 
-    val producersPool = ConnectionsPool(producerPartitionsLeaders.values.toSet(),
-            { hostPort -> ConnectionsPool.syncProducer(hostPort, cfg.socketTimeoutMills, cfg.requestTimeout, cfg.compressionCodec)},
-            { it.close() },
-            ConnectionsPool.genericPool(cfg.connectionsMax))
     val consumersPool = ConnectionsPool(consumerPartitionsLeaders.values.toSet(),
             { hostPort -> SimpleConsumer(hostPort.host, hostPort.port, cfg.socketTimeoutMills, cfg.readBuffer, "aquana-consumer") },
+            { it.close() },
+            ConnectionsPool.genericPool(cfg.connectionsMax))
+
+    val producersPool = ConnectionsPool(producerPartitionsLeaders.values.toSet(),
+            { hostPort -> ConnectionsPool.syncProducer(hostPort, cfg.socketTimeoutMills, cfg.requestTimeout, cfg.compressionCodec)},
             { it.close() },
             ConnectionsPool.genericPool(cfg.connectionsMax))
     val resolveProducerMetadataPool = ConnectionsPool(producerPartitionsLeaders.values.toSet(),
@@ -64,8 +65,8 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
             { getPartitionsMeta(resolveProducerMetadataPool, producerPartitionsLeaders, cfg.producerEntryPoint.topic)})
             .collectToList()
     resolveProducerMetadataPool.close()
-    val consumers = initConsumers(consumersPool, consumerPartitionsMeta, cfg.fetchSize, cfg.startFrom)
     val producers = initProducers(producersPool, producerPartitionsMeta)
+    val consumers = initConsumers(consumersPool, consumerPartitionsMeta, cfg.fetchSize, cfg.startFrom)
     val offsetWeStartWith = consumers.mapValues {it.value.offset()}
 
     class ReadKafka
@@ -89,7 +90,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     val writeEvt = outIOEventBus.on(Selectors.`type`(WriteKafka::class.java), { input: Event<Ticket> ->
         val ticket = input.data
         val messages = ticket.messages
-        if (!skewControl.tryAdvance(ticket.reader.partition())) {
+        if (!skewControl.tryAdvance(ticket.taskId)) {
             outIOEventBus.notify(WriteKafka::class.java, input)
         } else {
             ticket.writer.write(messages)
@@ -104,10 +105,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     partitionsFitsBacklog.downTo(1).forEach { i ->
         logger.debug("Submitting tickets - round $i")
         consumerPartitionsLeaders.keys.forEach { num ->
-            inIOEventBus.notify(ReadKafka::class.java, Event.wrap(Ticket(
-                    consumers[num]!!,
-                    producers[num]!!
-            )))
+            inIOEventBus.notify(ReadKafka::class.java, Event.wrap(Ticket(num, consumers[num]!!, producers[num]!!)))
         }
     }
     val timer = Timer()

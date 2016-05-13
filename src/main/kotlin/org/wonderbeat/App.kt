@@ -50,7 +50,7 @@ fun main(args : Array<String>) {
     opts.addOption(Option("consumerTopic", true, "[String] Source Kafka topic" ))
     opts.addOption(Option("producer", true, "[String] Destination Kafka ip address" ))
     opts.addOption(Option("producerPort", true, "[Int] Optional. Destination Kafka port. Default: $defaultPort" ))
-    opts.addOption(Option("producerTopic", true, "[String] Optional. Destination Kafka topic. Default: consumerTopic" ))
+    opts.addOption(Option("producerTopic", true, "[String] Destination Kafka topic" ))
     val defaultPoolSize = 10
     opts.addOption(Option("compressionCodec", true, "[String] Optional. Which compression codec PRODUCER should use. Default 'none'. Possible values are 'gzip' and 'snappy'"))
     opts.addOption(Option("inputPool", true, "[Int] Optional. Consumer thread pool size. Default: $defaultPoolSize" ))

@@ -38,14 +38,11 @@ class MonotonicConcurrentConsumer(val consumer: PoolAwareConsumer, var offset: A
     }
 
     override fun offset(): Long = offset.get()
-    override fun partition(): Int = consumer.partition
-
 }
 
 interface MonotonicConsumer {
     fun fetch(): ByteBufferMessageSet
     fun offset(): Long
-    fun partition(): Int
 }
 
 class PoolAwareConsumer(val topic: String,

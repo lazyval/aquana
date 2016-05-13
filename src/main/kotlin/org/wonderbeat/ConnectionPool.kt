@@ -17,7 +17,7 @@ class PartitionConnectionPool<T>(val connections: ConnectionsPool<T>,
     fun returnConnection(partition: Int, con: T) = connections.hostToConnection[partitionToHostLeader[partition]]!!.returnObject(con)
 }
 
-class ConnectionsPool<T>(hostList: Collection<HostPort>,
+class ConnectionsPool<T>(hostList: Set<HostPort>,
                          private val constructor: (hostPort: HostPort) -> T,
                          private val destructor: (T) -> Unit,
                          private val poolCfg: GenericObjectPoolConfig = ConnectionsPool.defaultPoolCfg()) {
