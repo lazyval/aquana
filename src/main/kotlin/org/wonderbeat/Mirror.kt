@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory
 import reactor.Environment
 import reactor.bus.Event
 import reactor.bus.EventBus
-import reactor.bus.selector.Selectors
+import reactor.bus.selector.Selectors.`$`
 import reactor.core.Dispatcher
 import reactor.core.dispatch.ThreadPoolExecutorDispatcher
 import reactor.rx.Promise
@@ -33,6 +33,9 @@ fun initDispatchers(env: Environment, cfg: MirrorConfig): Dispatchers {
     env.setDispatcher("out-io-dispatcher", ThreadPoolExecutorDispatcher(cfg.threadCountOut, cfg.backlog, "io-output-pool"))
     return Dispatchers(env.getDispatcher("in-io-dispatcher"), env.getDispatcher("out-io-dispatcher"))
 }
+
+object ReadKafka
+object WriteKafka
 
 fun run(cfg: MirrorConfig): MirrorStatistics {
     logger.debug("About to start: $cfg")
@@ -70,8 +73,6 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     val consumers = initConsumers(consumersPool, consumerPartitionsMeta, cfg.fetchSize, cfg.startFrom)
     val offsetWeStartWith = consumers.mapValues { it.value.offset() }
 
-    class ReadKafka
-    class WriteKafka
     val stopPromise = Promise<Event<Unit>>()
     val environment = Environment()
     val dispatchers = initDispatchers(environment, cfg)
@@ -83,21 +84,21 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     }
     val msgCount = AtomicLong()
 
-    val readEvt = inIOEventBus.on(Selectors.`type`(ReadKafka::class.java), { input: Event<Ticket> ->
+    val readEvt = inIOEventBus.on(`$`(ReadKafka), { input: Event<Ticket> ->
         val ticket = input.data
         input.data.messages = ticket.reader.fetch()
         outIOEventBus.notify(WriteKafka::class.java, input)
     })
-    val writeEvt = outIOEventBus.on(Selectors.`type`(WriteKafka::class.java), { input: Event<Ticket> ->
+    val writeEvt = outIOEventBus.on(`$`(WriteKafka), { input: Event<Ticket> ->
         val ticket = input.data
         val messages = ticket.messages
         if (!skewControl.tryAdvance(ticket.taskId)) {
-            outIOEventBus.notify(WriteKafka::class.java, input)
+            outIOEventBus.notify(WriteKafka, input)
         } else {
             ticket.writer.write(messages)
             msgCount.addAndGet(messages.size().toLong())
             ticket.messages = emptyBuffer
-            inIOEventBus.notify(ReadKafka::class.java, input)
+            inIOEventBus.notify(ReadKafka, input)
         }
     })
 
@@ -106,7 +107,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     (1 .. partitionsFitsBacklog).forEach { i ->
         logger.debug("Submitting tickets - round $i")
         consumerPartitionsLeaders.keys.forEach { num ->
-            inIOEventBus.notify(ReadKafka::class.java, Event.wrap(Ticket(num, consumers[num]!!, producers[num]!!)))
+            inIOEventBus.notify(ReadKafka, Event.wrap(Ticket(num, consumers[num]!!, producers[num]!!)))
         }
     }
     val timer = Timer()

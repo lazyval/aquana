@@ -15,8 +15,9 @@ object NoopSkewControl: SkewControl {
 /**
  * Kinda Monotonic checker
  */
-class ConcurrentSkewControl(val maxSkew: Int, val bucketsIds: List<Int>,
-                            val limitLoggingPermitsPerSecond: RateLimiter = RateLimiter.create(0.05)): SkewControl {
+class ConcurrentSkewControl(private val maxSkew: Int,
+                            private val bucketsIds: List<Int>,
+                            private val limitLoggingPermitsPerSecond: RateLimiter = RateLimiter.create(0.05)): SkewControl {
 
     private val logger = LoggerFactory.getLogger(ConcurrentSkewControl::class.java)
 

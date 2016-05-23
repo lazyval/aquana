@@ -14,8 +14,13 @@ import java.util.concurrent.atomic.AtomicLong
 
 private val logger = LoggerFactory.getLogger("org.wonderbeat.consumers")
 
+interface MonotonicConsumer {
+    fun fetch(): ByteBufferMessageSet
+    fun offset(): Long
+}
+
 class RetryingConsumer(private val delegate: MonotonicConsumer,
-                       val retryer: Retryer<ByteBufferMessageSet> = RetryerBuilder.newBuilder<ByteBufferMessageSet>()
+                       private val retryer: Retryer<ByteBufferMessageSet> = RetryerBuilder.newBuilder<ByteBufferMessageSet>()
                                             .retryIfException()
                                             .withRetryListener(logAttemptFailure)
                                             .withWaitStrategy(WaitStrategies.exponentialWait(2, 10, TimeUnit.SECONDS))
@@ -24,7 +29,8 @@ class RetryingConsumer(private val delegate: MonotonicConsumer,
     override fun fetch(): ByteBufferMessageSet = retryer.call {  delegate.fetch() }
 }
 
-class MonotonicConcurrentConsumer(val consumer: PoolAwareConsumer, var offset: AtomicLong): MonotonicConsumer {
+class MonotonicConcurrentConsumer(private val consumer: PoolAwareConsumer,
+                                  private var offset: AtomicLong): MonotonicConsumer {
 
     override fun fetch(): ByteBufferMessageSet {
         var messages: ByteBufferMessageSet?
@@ -39,13 +45,7 @@ class MonotonicConcurrentConsumer(val consumer: PoolAwareConsumer, var offset: A
         } while(messages == null || !inTime)
         return messages
     }
-
     override fun offset(): Long = offset.get()
-}
-
-interface MonotonicConsumer {
-    fun fetch(): ByteBufferMessageSet
-    fun offset(): Long
 }
 
 class PoolAwareConsumer(val topic: String,
