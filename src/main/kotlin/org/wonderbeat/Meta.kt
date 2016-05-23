@@ -16,7 +16,7 @@ fun getPartitionsMeta(consumersPool: ConnectionsPool<SimpleConsumer>, leaders: M
             connectionPool.returnObject(consumer)
         }
     }
-    val out = leaders.map { entry ->
+    return leaders.map { entry ->
         val (beginPosition, endPosition) = invokeConcurrently(
                 { tryResolve({ it.resolveOffsets(topic, listOf(entry.key), Position.BEGIN) }, entry.value) },
                 { tryResolve({ it.resolveOffsets(topic, listOf(entry.key), Position.END) }, entry.value) }).collectToList()
@@ -24,7 +24,5 @@ fun getPartitionsMeta(consumersPool: ConnectionsPool<SimpleConsumer>, leaders: M
             beginPosition.entries.first().value,
             endPosition.entries.first().value)
     }
-    return out
-
 }
 

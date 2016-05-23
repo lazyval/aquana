@@ -28,14 +28,15 @@ class RetryingProducer(val producer: Producer,
 
 class PoolAwareProducer(val topic: String,
                         val partition: Int,
-                        private val producerPool: PartitionConnectionPool<SyncProducer>): Producer {
+                        private val producerPool: PartitionConnectionPool<SyncProducer>,
+                        val clientId: String = "aquana",
+                        val requiredAcks: Short = 1,
+                        val ackTimeout: Int = 1000): Producer {
 
     private val correlationId = AtomicInteger(0)
 
     override fun write(messages: ByteBufferMessageSet): ProducerResponse {
-        val request: ProducerRequest =
-                ProducerRequest(ProducerRequest.CurrentVersion(), correlationId.andDecrement, "kafka-producer",
-                        1, 1000, asScalaMap(mapOf(Pair(TopicAndPartition(topic, partition), messages))))
+        val request = createRequest(messages)
         val connection = producerPool.borrowConnection(partition)!!
         try {
             return connection.send(request)
@@ -46,6 +47,10 @@ class PoolAwareProducer(val topic: String,
             producerPool.returnConnection(partition, connection)
         }
     }
+
+    private fun createRequest(messages: ByteBufferMessageSet): ProducerRequest =
+            ProducerRequest(ProducerRequest.CurrentVersion(), correlationId.andIncrement, clientId,
+                    requiredAcks, ackTimeout, asScalaMap(mapOf(Pair(TopicAndPartition(topic, partition), messages))))
 
     override fun toString() = "{PoolAwareProducer: [ $topic-$partition, $producerPool]}"
 }
