@@ -87,7 +87,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     val readEvt = inIOEventBus.on(`$`(ReadKafka), { input: Event<Ticket> ->
         val ticket = input.data
         input.data.messages = ticket.reader.fetch()
-        outIOEventBus.notify(WriteKafka::class.java, input)
+        outIOEventBus.notify(WriteKafka, input)
     })
     val writeEvt = outIOEventBus.on(`$`(WriteKafka), { input: Event<Ticket> ->
         val ticket = input.data
