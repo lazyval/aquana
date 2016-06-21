@@ -85,20 +85,19 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
     val msgCount = AtomicLong()
 
     val readEvt = inIOEventBus.on(`$`(ReadKafka), { input: Event<Ticket> ->
-        val ticket = input.data
-        input.data.messages = ticket.reader.fetch()
+        input.data.messages = input.data.reader.fetch()
         outIOEventBus.notify(WriteKafka, input)
     })
     val writeEvt = outIOEventBus.on(`$`(WriteKafka), { input: Event<Ticket> ->
         val ticket = input.data
-        val messages = ticket.messages
         if (!skewControl.tryAdvance(ticket.taskId)) {
             outIOEventBus.notify(WriteKafka, input)
         } else {
+            val messages = ticket.messages
             ticket.writer.write(messages)
-            msgCount.addAndGet(messages.size().toLong())
             ticket.messages = emptyBuffer
             inIOEventBus.notify(ReadKafka, input)
+            msgCount.addAndGet(messages.size().toLong())
         }
     })
 

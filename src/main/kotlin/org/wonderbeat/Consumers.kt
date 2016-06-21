@@ -31,20 +31,25 @@ class RetryingConsumer(private val delegate: MonotonicConsumer,
 
 class MonotonicConcurrentConsumer(private val consumer: PoolAwareConsumer,
                                   private var offset: AtomicLong): MonotonicConsumer {
+    private data class MessagesFromOffset(val messageSet: ByteBufferMessageSet, val offset: Long)
 
-    override fun fetch(): ByteBufferMessageSet {
-        var messages: ByteBufferMessageSet?
-        do {
+    override fun fetch(): ByteBufferMessageSet =
+        generateSequence {
             val ofst = offset.get()
-            messages = consumer.fetch(ofst)
-            val size = if(messages == null) 0 else messages.size()
-            val inTime = offset.compareAndSet(ofst, ofst + size)
+            val messages = consumer.fetch(ofst)
+            Pair(messages, ofst)
+        }.filter {
+            it.first != null && it.first!!.size() > 0
+        }.map {
+            MessagesFromOffset(it.first!!, it.second)
+        }.filter {
+            val inTime = offset.compareAndSet(it.offset, it.offset + it.messageSet.size())
             if(!inTime && logger.isInfoEnabled) {
-                logger.info("Fetch took too long for $consumer and offset $ofst")
+                logger.info("Fetch took too long for $consumer and offset ${it.offset}")
             }
-        } while(messages == null || !inTime)
-        return messages
-    }
+            inTime
+        }.first().messageSet
+
     override fun offset(): Long = offset.get()
 }
 
@@ -59,15 +64,14 @@ class PoolAwareConsumer(val topic: String,
     private val fetchBuilder = FetchRequestBuilder().clientId(clientId).maxWait(maxWaitMs).minBytes(minBytes)
 
     fun fetch(offset: Long): ByteBufferMessageSet? {
-        val request = fetchBuilder.addFetch(topic, partition, offset, fetchSize).build()
         val connection = consumersPool.borrowConnection(partition)!!
+        val request = fetchBuilder.addFetch(topic, partition, offset, fetchSize).build()
         try {
             val response = connection.fetch(request)
             if(response.hasError()) {
                 throw ErrorMapping.exceptionFor(response.errorCode(topic, partition))
-            } else {
-                return response.messageSet(topic, partition)
             }
+            return response.messageSet(topic, partition)
         } finally {
             consumersPool.returnConnection(partition, connection)
         }
