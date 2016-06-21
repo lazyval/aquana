@@ -37,7 +37,7 @@ class PoolAwareProducer(val topic: String,
 
     override fun write(messages: ByteBufferMessageSet): ProducerResponse {
         val request = createRequest(messages)
-        val connection = producerPool.borrowConnection(partition)!!
+        val connection = producerPool.borrowConnection(partition)
         try {
             return connection.send(request)
         } catch(ex: Exception) {

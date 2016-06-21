@@ -13,7 +13,7 @@ import java.util.*
 
 class PartitionConnectionPool<T>(val connections: ConnectionsPool<T>,
                                  val partitionToHostLeader: Map<Int, HostPort>) {
-    fun borrowConnection(partition: Int): T? = connections.hostToConnection[partitionToHostLeader[partition]]?.borrowObject()
+    fun borrowConnection(partition: Int): T = connections.hostToConnection[partitionToHostLeader[partition]]!!.borrowObject()
     fun returnConnection(partition: Int, con: T) = connections.hostToConnection[partitionToHostLeader[partition]]!!.returnObject(con)
 }
 

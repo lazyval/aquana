@@ -64,7 +64,7 @@ class PoolAwareConsumer(val topic: String,
     private val fetchBuilder = FetchRequestBuilder().clientId(clientId).maxWait(maxWaitMs).minBytes(minBytes)
 
     fun fetch(offset: Long): ByteBufferMessageSet? {
-        val connection = consumersPool.borrowConnection(partition)!!
+        val connection = consumersPool.borrowConnection(partition)
         val request = fetchBuilder.addFetch(topic, partition, offset, fetchSize).build()
         try {
             val response = connection.fetch(request)
