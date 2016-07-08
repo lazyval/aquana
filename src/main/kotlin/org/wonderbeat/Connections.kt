@@ -1,6 +1,7 @@
 package org.wonderbeat
 
 import kafka.consumer.SimpleConsumer
+import kafka.message.CompressionCodec
 import kafka.network.BlockingChannel
 import kafka.producer.SyncProducer
 import org.slf4j.LoggerFactory
@@ -36,12 +37,17 @@ fun startWithOffsets(offsets: Map<Int, Long>,
 
 
 fun initProducers(pool: ConnectionsPool<SyncProducer>,
-                  partitionsMeta: List<PartitionMeta>): Map<Int, Producer> {
+                  partitionsMeta: List<PartitionMeta>,
+                  compressionCodec: CompressionCodec): Map<Int, Producer> {
     val producerLeaders = partitionsMeta.associateBy({it.partition}, {it.leader})
     logger.debug("Producer Leaders: $producerLeaders")
     return  partitionsMeta.associateBy({ it.partition }, {
-        RetryingProducer(PoolAwareProducer(it.topic, it.partition, PartitionConnectionPool(pool,
-                producerLeaders)))
+        CompressingProducer(
+            RetryingProducer(
+                PoolAwareProducer(it.topic, it.partition, PartitionConnectionPool(pool,producerLeaders))
+            ),
+            compressionCodec
+        )
     })
 }
 

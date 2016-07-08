@@ -55,7 +55,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
             ConnectionsPool.genericPool(cfg.connectionsMax))
 
     val producersPool = ConnectionsPool(producerPartitionsLeaders.values.toSet(),
-            { hostPort -> ConnectionsPool.syncProducer(hostPort, cfg.socketTimeoutMills, cfg.requestTimeout, cfg.compressionCodec)},
+            { hostPort -> ConnectionsPool.syncProducer(hostPort, cfg.socketTimeoutMills, cfg.requestTimeout)},
             { it.close() },
             ConnectionsPool.genericPool(cfg.connectionsMax))
     val (consumerPartitionsMeta, producerPartitionsMeta) = invokeConcurrently(
@@ -69,7 +69,7 @@ fun run(cfg: MirrorConfig): MirrorStatistics {
                 }
             }).collectToList()
 
-    val producers = initProducers(producersPool, producerPartitionsMeta)
+    val producers = initProducers(producersPool, producerPartitionsMeta, cfg.compressionCodec)
     val consumers = initConsumers(consumersPool, consumerPartitionsMeta, cfg.fetchSize, cfg.startFrom)
     val offsetWeStartWith = consumers.mapValues { it.value.offset() }
 
