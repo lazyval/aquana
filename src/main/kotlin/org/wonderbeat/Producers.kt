@@ -9,7 +9,6 @@ import kafka.common.TopicAndPartition
 import kafka.message.ByteBufferMessageSet
 import kafka.message.CompressionCodec
 import kafka.message.Message
-import kafka.message.`NoCompressionCodec$`
 import kafka.producer.SyncProducer
 import org.slf4j.LoggerFactory
 import scala.collection.JavaConversions.asScalaMap
@@ -33,15 +32,10 @@ class RetryingProducer(val producer: Producer,
 
 class CompressingProducer(val producer: Producer, val compressionCodec: CompressionCodec): Producer by producer {
     override fun write(serialized: ByteBufferMessageSet): ProducerResponse {
-        val shouldCompress = ! compressionCodec.equals(`NoCompressionCodec$`.`MODULE$`)
 
-        val messages = if (shouldCompress) {
-            // the most straightforward way is to just repack messages
-            // could be optimized, but we will need to replicate and support code similar to original kafka compression
-            ByteBufferMessageSet(compressionCodec, unserialize(serialized))
-        } else {
-            serialized
-        }
+        // the most straightforward way is to just repack messages
+        // could be optimized, but we will need to replicate and support code similar to original kafka compression
+        val messages = ByteBufferMessageSet(compressionCodec, unserialize(serialized))
 
         return producer.write(messages)
     }

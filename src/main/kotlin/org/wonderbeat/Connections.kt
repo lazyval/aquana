@@ -2,6 +2,7 @@ package org.wonderbeat
 
 import kafka.consumer.SimpleConsumer
 import kafka.message.CompressionCodec
+import kafka.message.`NoCompressionCodec$`
 import kafka.network.BlockingChannel
 import kafka.producer.SyncProducer
 import org.slf4j.LoggerFactory
@@ -41,13 +42,15 @@ fun initProducers(pool: ConnectionsPool<SyncProducer>,
                   compressionCodec: CompressionCodec): Map<Int, Producer> {
     val producerLeaders = partitionsMeta.associateBy({it.partition}, {it.leader})
     logger.debug("Producer Leaders: $producerLeaders")
+
+    val shouldCompress = ! compressionCodec.equals(`NoCompressionCodec$`.`MODULE$`)
+
     return  partitionsMeta.associateBy({ it.partition }, {
-        CompressingProducer(
-            RetryingProducer(
+            val producer = RetryingProducer(
                 PoolAwareProducer(it.topic, it.partition, PartitionConnectionPool(pool,producerLeaders))
-            ),
-            compressionCodec
-        )
+            )
+
+            if (shouldCompress) CompressingProducer(producer, compressionCodec) else producer
     })
 }
 
